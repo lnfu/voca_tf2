@@ -4,7 +4,7 @@ import logging
 
 from .index_handler import IndexHandler
 from .audio_handler import AudioHandler
-from .mesh_handler import MeshHandler
+from .pcd_handler import PointCloudHandler
 
 
 class DataHandler:
@@ -17,12 +17,12 @@ class DataHandler:
         self.sequence_names = sequence_names
 
         self.audio_data_handler = AudioHandler()
-        self.mesh_data_handler = MeshHandler()
+        self.pcd_data_handler = PointCloudHandler()
         self.index_data_handler = IndexHandler(
             subject_names=subject_names, sequence_names=sequence_names
         )
 
-        self.audio_processed_data = self.audio_data_handler.get_processed_data()
+        self.audio_processed_data = self.audio_data_handler.get_processed_training_data()
 
     def get_training_subject_id_by_name(self, name):
         try:
@@ -36,12 +36,12 @@ class DataHandler:
             window for window in batch_windows if None not in window["indices"]
         ]
 
-        mesh_indices = []
+        pcd_indices = []
 
-        meshes = []
+        label_pcds = []
         audios = []
         subject_ids = []
-        templates = []
+        template_pcds = []
 
         for window in filtered_batch_windows:
             subject_name = window["subject"]
@@ -71,18 +71,18 @@ class DataHandler:
                 )
                 continue
 
-            for frame_index, mesh_index in window["indices"]:
-                mesh_indices.append(mesh_index)
+            for frame_index, pcd_index in window["indices"]:
+                pcd_indices.append(pcd_index)
                 audios.append(
                     self.audio_processed_data[subject_name][sequence_name][frame_index]
                 )
                 subject_ids.append(self.get_training_subject_id_by_name(subject_name))
-                templates.append(
-                    self.mesh_data_handler.templates[subject_name]
+                template_pcds.append(
+                    self.pcd_data_handler.template_pcds[subject_name]
                 )  # TODO check 存在
 
-        meshes = self.mesh_data_handler.meshes[mesh_indices]
-        return np.array(subject_ids), np.array(templates), np.array(audios), meshes
+        label_pcds = self.pcd_data_handler.pcds[pcd_indices]
+        return np.array(subject_ids), np.array(template_pcds), np.array(audios), label_pcds
 
     def get_windows_by_split(self, split):
         return self.index_data_handler.windows[split]

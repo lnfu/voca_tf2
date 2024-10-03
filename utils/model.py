@@ -3,6 +3,14 @@ import tensorflow as tf
 from .batcher import Batcher
 
 
+# TODO refactor
+def custom_loss(y_true, y_pred):  # (?, 5023, 3)
+    squared_diff = tf.math.squared_difference(y_pred, y_true)  # (?, 5023, 3)
+    error_sum = tf.math.reduce_sum(squared_diff, axis=2)  # (?, 5023)
+    mean_error = tf.math.reduce_mean(error_sum)
+    return mean_error
+
+
 class Model:
     def __init__(self, batcher: Batcher):
         self.batcher = batcher
@@ -10,19 +18,27 @@ class Model:
     def train(self):
 
         subject_id_ont_hot_shape = (None,)
-        template_shape = (None, 5023, 3)
+        template_pcd_shape = (None, 5023, 3)
         deepspeech_feature_shape = (None, 16, 29)
 
         input_c = tf.keras.Input(shape=subject_id_ont_hot_shape[1:], name="input_c")
-        input_t = tf.keras.Input(shape=template_shape[1:], name="input_t")
+        input_t = tf.keras.Input(shape=template_pcd_shape[1:], name="input_t")
         input_x = tf.keras.Input(shape=deepspeech_feature_shape[1:], name="input_x")
         c = tf.keras.layers.CategoryEncoding(num_tokens=8, output_mode="one_hot")(
             input_c
-        )
+        )  # (None, 8,)
         x = tf.keras.layers.BatchNormalization(epsilon=1e-5, momentum=0.9)(input_x)
         x = tf.keras.layers.Reshape((16, 1, 29))(x)  # (None, 16, 1, 29)
 
-        # TODO 之後這邊也加上 subject_id_ont_hot
+        # 第一次　Identity concat　加上　subject_id_ont_hot
+        x = tf.keras.layers.Concatenate(axis=-1)(
+            [
+                x,
+                tf.keras.layers.Lambda(lambda x: tf.tile(x, [1, 16, 1, 1]))(
+                    tf.keras.layers.Reshape((1, 1, 8))(c)  # (None, 1, 8)
+                ),  # (None, 16, 1, 8)
+            ]
+        )
 
         factor = 1.0  # TODO
 
@@ -68,6 +84,7 @@ class Model:
 
         x = tf.keras.layers.Flatten()(conv4)
 
+        # 第二次　Identity concat　加上　subject_id_ont_hot
         x = tf.keras.layers.Concatenate(axis=-1)([x, c])
 
         fc1 = tf.keras.layers.Dense(units=128, activation="tanh", name="fc1")(x)
@@ -81,18 +98,11 @@ class Model:
         model = tf.keras.Model(inputs=[input_c, input_t, input_x], outputs=y)
 
         # TODO refactor
-        def custom_loss(y_true, y_pred):  # (?, 5023, 3)
-            squared_diff = tf.math.squared_difference(y_pred, y_true)  # (?, 5023, 3)
-            error_sum = tf.math.reduce_sum(squared_diff, axis=2)  # (?, 5023)
-            mean_error = tf.math.reduce_mean(error_sum)
-            return mean_error
-
-        # TODO refactor
         def data_generator(split):
             self.batcher.set_split(split)
             while True:
-                subject_ids, templates, audios, meshes = self.batcher.get_next()
-                yield (subject_ids, templates, audios), meshes
+                subject_ids, template_pcds, audios, label_pcds = self.batcher.get_next()
+                yield (subject_ids, template_pcds, audios), label_pcds
 
         dataset = {}
         for split in {"train", "val", "test"}:
@@ -119,15 +129,16 @@ class Model:
 
         model.compile(optimizer=optimizer, loss=custom_loss)
 
-        # predictions = model.predict([subject_id_one_hots, templates, audios])
-
         history = model.fit(
             dataset["train"],
-            steps_per_epoch=1330,
-            epochs=100,
+            steps_per_epoch=self.batcher.get_num_window("train")
+            // self.batcher.batch_size,
+            epochs=50,
             validation_data=dataset["val"],
             validation_steps=10,  # TODO 計算上限　(不然賄選到重複的 val)
         )
 
         test_loss = model.evaluate(dataset["test"], steps=100)
         print("Test Loss:", test_loss)
+
+        model.save("models/")

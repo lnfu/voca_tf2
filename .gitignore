@@ -72,3 +72,7 @@ cython_debug/
 # dataset
 data/*
 !data/README.md
+# models
+models
+# outputs
+outputs

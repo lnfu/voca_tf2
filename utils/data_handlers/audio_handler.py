@@ -36,7 +36,7 @@ class AudioHandler:
             )
         return output_features
 
-    def get_processed_data(self):
+    def get_processed_training_data(self):
         if os.path.exists(self.processed_data_path):
             logging.info(f"使用已處理過的音訊 {self.processed_data_path}")
             return pickle.load(open(self.processed_data_path, "rb"), encoding="latin1")
@@ -45,17 +45,17 @@ class AudioHandler:
         # 也許就直接搞自己的 dataset 就不用多這些步驟?
         # 換個角度想, 不要動　dataset 好像比較合理?
         # TODO 檢查　raw_data_path 使否存在
-        raw_data = pickle.load(
-            open(self.raw_data_path, "rb"), encoding="latin1"
-        )
+        raw_data = pickle.load(open(self.raw_data_path, "rb"), encoding="latin1")
 
-        processed_data = self.process(raw_data)
-        pickle.dump(processed_data, open(self.processed_data_path, "wb")) # save processed_data
+        processed_data = self.batch_process(raw_data)
+        pickle.dump(
+            processed_data, open(self.processed_data_path, "wb")
+        )  # save processed_data
 
         return processed_data
 
     # TODO refactor (封裝)
-    def process(self, raw_data):
+    def batch_process(self, raw_data):
 
         logging.info(f"開始處理音訊")
 
