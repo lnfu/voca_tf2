@@ -22,10 +22,11 @@ def main():
 
     audio_data_handler = AudioDataHandler()
 
-    audio_raw_data = pickle.load(
-        open("data/raw_audio_fixed.pkl", "rb"), encoding="latin1"
-    )
-    audio_data_handler.process(raw_data=audio_raw_data)
+    test = audio_data_handler.get_processed_data()
+
+    for subject_name, subject_data in test.items():
+        for sequence_name, sequence_data in subject_data.items():
+            print(subject_name, sequence_name, sequence_data.shape)
 
     # mesh_data_handler = MeshDataHandler()
 

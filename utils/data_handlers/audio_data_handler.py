@@ -1,6 +1,8 @@
 import numpy as np
 import tensorflow as tf
 
+import os
+import pickle
 import logging
 import resampy
 from python_speech_features import mfcc
@@ -11,6 +13,9 @@ class AudioDataHandler:
         self.num_features = 29
         self.window_size = 16
         self.stride = 1
+
+        self.processed_data_path = "data/deepspeech.pkl"
+        self.raw_data_path = "data/raw_audio_fixed.pkl"
 
     def resample(self, input, sample_rate_in, sample_rate_out, output_length):
         input_length = input.shape[0]
@@ -31,7 +36,28 @@ class AudioDataHandler:
             )
         return output_features
 
+    def get_processed_data(self):
+        if os.path.exists(self.processed_data_path):
+            logging.info(f"使用已處理過的音訊 {self.processed_data_path}")
+            return pickle.load(open(self.processed_data_path, "rb"), encoding="latin1")
+
+        logging.info(f"音訊尚未處理")
+        # 也許就直接搞自己的 dataset 就不用多這些步驟?
+        # 換個角度想, 不要動　dataset 好像比較合理?
+        # TODO 檢查　raw_data_path 使否存在
+        raw_data = pickle.load(
+            open(self.raw_data_path, "rb"), encoding="latin1"
+        )
+
+        processed_data = self.process(raw_data)
+        pickle.dump(processed_data, open(self.processed_data_path, "wb")) # save processed_data
+
+        return processed_data
+
+    # TODO refactor (封裝)
     def process(self, raw_data):
+
+        logging.info(f"開始處理音訊")
 
         # 先載入 deepspeech 模型 (好像是 6 層)
         # 輸入是 MFCC
@@ -61,13 +87,17 @@ class AudioDataHandler:
                 for sequence_name, sequence_data in subject_data.items():
 
                     sample_rate = sequence_data["sample_rate"]  # 22000 = 22 kHz
-                    raw_audio = sequence_data["audio"]  # ndarray, shape=(?,), dtype=int16
+                    raw_audio = sequence_data[
+                        "audio"
+                    ]  # ndarray, shape=(?,), dtype=int16
                     logging.info(
-                        f"正在處理音訊 Subject = {subject_name}, Sequence = {sequence_name}"
+                        f"當前處理音訊: Subject = {subject_name}, Sequence = {sequence_name}"
                     )
 
                     resampled_audio = resampy.resample(
-                        raw_audio.astype(np.float32), sample_rate, 16000  # TODO why 16000?
+                        raw_audio.astype(np.float32),
+                        sample_rate,
+                        16000,  # TODO why 16000?
                     )
 
                     # mfcc_features shape = (x, 26)
@@ -149,4 +179,5 @@ class AudioDataHandler:
 
                 processed_data[subject_name] = processed_subject_data
 
+        logging.info("音訊處理完成")
         return processed_data
