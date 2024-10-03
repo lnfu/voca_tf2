@@ -1,8 +1,10 @@
+import numpy as np
+
+import logging
+
 from .index_handler import IndexHandler
 from .audio_handler import AudioHandler
 from .mesh_handler import MeshHandler
-
-import logging
 
 
 class DataHandler:
@@ -26,8 +28,7 @@ class DataHandler:
         try:
             return self.subject_names["train"].index(name)
         except ValueError:
-            logging.error(f"Subject 不存在: {name}")
-            return None
+            return np.random.randint(0, len(self.subject_names["train"]))
 
     def get_data_by_batch_windows(self, batch_windows: list[list]) -> tuple:
 
@@ -46,12 +47,12 @@ class DataHandler:
             subject_name = window["subject"]
             sequence_name = window["sequence"]
             if subject_name not in self.audio_processed_data:
-                logging.warning(
+                logging.debug(
                     f"音訊資料不存在 Subject = {subject_name}, Sequence = *"
                 )
                 continue
             if sequence_name not in self.audio_processed_data[subject_name]:
-                logging.warning(
+                logging.debug(
                     f"音訊資料不存在 Subject = {subject_name}, Sequence = {sequence_name}"
                 )
                 continue
@@ -65,7 +66,7 @@ class DataHandler:
                     break
 
             if not is_audio_valid:
-                logging.warning(
+                logging.debug(
                     f"音訊資料不正確 (frame_index 超出範圍) Subject = {subject_name}, Sequence = {sequence_name}"
                 )
                 continue
@@ -81,8 +82,7 @@ class DataHandler:
                 )  # TODO check 存在
 
         meshes = self.mesh_data_handler.meshes[mesh_indices]
-
-        return meshes, audios, subject_ids, templates
+        return np.array(subject_ids), np.array(templates), np.array(audios), meshes
 
     def get_windows_by_split(self, split):
         return self.index_data_handler.windows[split]

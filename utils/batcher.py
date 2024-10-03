@@ -35,7 +35,7 @@ class Batcher:
         splitted_windows = self.windows[self.current_split]
 
         if self.current_index >= len(splitted_windows):
-            self.reset()
+            self.reset(self.current_split)
 
         batch_windows = splitted_windows[
             self.current_index : self.current_index + self.batch_size
@@ -45,7 +45,7 @@ class Batcher:
 
         self.current_index += self.batch_size
 
-        return data  # meshes, audios, subject_ids, templates
+        return data  # subject_ids, templates, audios, meshes
 
     def reset(self, split: str):
         self.current_index = 0

@@ -7,6 +7,7 @@ from utils.config import load_config
 
 from utils.data_handlers.data_handler import DataHandler
 from utils.batcher import Batcher
+from utils.model import Model
 
 logging.basicConfig(
     stream=sys.stdout,
@@ -131,14 +132,9 @@ def main():
     )
 
     batcher = Batcher(data_handler=data_handler)
+    model = Model(batcher=batcher)
 
-    batcher.set_split("train")
-    meshes, audios, subject_ids, templates = batcher.get_next()
-    print(len(meshes))
-    print(len(audios))
-    print(len(subject_ids))
-    print(len(templates))
-
+    model.train()
 
 if __name__ == "__main__":
     main()

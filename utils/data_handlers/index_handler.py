@@ -41,7 +41,7 @@ class IndexHandler:
             for subject_name in subject_names:
                 for sequence_name in sequence_names:
                     if subject_name not in indices_by_subject_and_sequence:
-                        logging.warning(
+                        logging.debug(
                             f"Index 資料不存在 Subject = {subject_name}, Sequence = *"
                         )
                         continue
@@ -50,7 +50,7 @@ class IndexHandler:
                         sequence_name
                         not in indices_by_subject_and_sequence[subject_name]
                     ):
-                        logging.warning(
+                        logging.debug(
                             f"Index 資料不存在 Subject = {subject_name}, Sequence = {sequence_name}"
                         )
                         continue
