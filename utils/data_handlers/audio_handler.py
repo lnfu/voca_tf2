@@ -8,7 +8,7 @@ import resampy
 from python_speech_features import mfcc
 
 
-class AudioDataHandler:
+class AudioHandler:
     def __init__(self):
         self.num_features = 29
         self.window_size = 16
