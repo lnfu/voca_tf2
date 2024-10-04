@@ -80,6 +80,7 @@ class DataHandler:
                 template_pcds.append(
                     self.pcd_data_handler.template_pcds[subject_name]
                 )  # TODO check 存在
+                break # TODO 之後刪掉!
 
         label_pcds = self.pcd_data_handler.pcds[pcd_indices]
         return np.array(subject_ids), np.array(template_pcds), np.array(audios), label_pcds

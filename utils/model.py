@@ -12,8 +12,13 @@ def custom_loss(y_true, y_pred):  # (?, 5023, 3)
 
 
 class Model:
-    def __init__(self, batcher: Batcher):
+    def __init__(
+        self, batcher: Batcher, learning_rate: float, epochs: int, validation_steps: int
+    ):
         self.batcher = batcher
+        self.learning_rate = learning_rate
+        self.epochs = epochs
+        self.validation_steps = validation_steps
 
     def train(self):
 
@@ -123,7 +128,7 @@ class Model:
         model.summary()
 
         optimizer = tf.keras.optimizers.Adam(
-            learning_rate=0.0001,
+            learning_rate=self.learning_rate,
             beta_1=0.9,
         )
 
@@ -133,9 +138,9 @@ class Model:
             dataset["train"],
             steps_per_epoch=self.batcher.get_num_window("train")
             // self.batcher.batch_size,
-            epochs=50,
+            epochs=self.epochs,
             validation_data=dataset["val"],
-            validation_steps=10,  # TODO 計算上限　(不然賄選到重複的 val)
+            validation_steps=self.validation_steps,  # TODO 計算上限　(不然賄選到重複的 val)
         )
 
         test_loss = model.evaluate(dataset["test"], steps=100)

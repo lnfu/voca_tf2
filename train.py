@@ -131,10 +131,19 @@ def main():
         subject_names=subject_names, sequence_names=sequence_names
     )
 
-    batcher = Batcher(data_handler=data_handler)
-    model = Model(batcher=batcher)
+    data_config = config["data"]
+    batcher = Batcher(data_handler=data_handler, batch_size=data_config["batch_size"])
+
+    training_config = config["training"]
+    model = Model(
+        batcher=batcher,
+        learning_rate=training_config["learning_rate"],
+        epochs=training_config["epochs"],
+        validation_steps=training_config["validation_steps"],
+    )
 
     model.train()
+
 
 if __name__ == "__main__":
     main()
