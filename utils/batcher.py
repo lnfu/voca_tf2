@@ -24,8 +24,11 @@ class Batcher:
         self.current_index = 0
         self.current_split = "train"
 
-    def get_num_window(self, split):
+    def get_num_windows(self, split):
         return len(self.windows[split])
+
+    def get_num_batches(self, split):
+        return self.get_num_windows(split) // self.batch_size
 
     def set_split(self, split="train"):
         if split not in self.windows:
@@ -48,7 +51,7 @@ class Batcher:
 
         self.current_index += self.batch_size
 
-        return data  # subject_ids, template_pcds, audios, label_pcds
+        return data  # subject_ids, audios, template_pcds, label_pcds
 
     def reset(self, split: str):
         self.current_index = 0

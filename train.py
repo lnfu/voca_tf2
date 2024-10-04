@@ -20,118 +20,15 @@ logging.basicConfig(
 def main():
     config = load_config("config.yaml")
 
-    subject_names = {
-        "train": [
-            "FaceTalk_170728_03272_TA",
-            "FaceTalk_170904_00128_TA",
-            "FaceTalk_170725_00137_TA",
-            "FaceTalk_170915_00223_TA",
-            "FaceTalk_170811_03274_TA",
-            "FaceTalk_170913_03279_TA",
-            "FaceTalk_170904_03276_TA",
-            "FaceTalk_170912_03278_TA",
-        ],
-        "val": ["FaceTalk_170811_03275_TA", "FaceTalk_170908_03277_TA"],
-        "test": [
-            "FaceTalk_170809_00138_TA",
-            "FaceTalk_170731_00024_TA",
-        ],
-    }
+    data_config = config["data"]
 
-    sequence_names = {
-        "train": [
-            "sentence01",
-            "sentence02",
-            "sentence03",
-            "sentence04",
-            "sentence05",
-            "sentence06",
-            "sentence07",
-            "sentence08",
-            "sentence09",
-            "sentence10",
-            "sentence11",
-            "sentence12",
-            "sentence13",
-            "sentence14",
-            "sentence15",
-            "sentence16",
-            "sentence17",
-            "sentence18",
-            "sentence19",
-            "sentence20",
-            "sentence21",
-            "sentence22",
-            "sentence23",
-            "sentence24",
-            "sentence25",
-            "sentence26",
-            "sentence27",
-            "sentence28",
-            "sentence29",
-            "sentence30",
-            "sentence31",
-            "sentence32",
-            "sentence33",
-            "sentence34",
-            "sentence35",
-            "sentence36",
-            "sentence37",
-            "sentence38",
-            "sentence39",
-            "sentence40",
-        ],
-        "val": [
-            "sentence21",
-            "sentence22",
-            "sentence23",
-            "sentence24",
-            "sentence25",
-            "sentence26",
-            "sentence27",
-            "sentence28",
-            "sentence29",
-            "sentence30",
-            "sentence31",
-            "sentence32",
-            "sentence33",
-            "sentence34",
-            "sentence35",
-            "sentence36",
-            "sentence37",
-            "sentence38",
-            "sentence39",
-            "sentence40",
-        ],
-        "test": [
-            "sentence21",
-            "sentence22",
-            "sentence23",
-            "sentence24",
-            "sentence25",
-            "sentence26",
-            "sentence27",
-            "sentence28",
-            "sentence29",
-            "sentence30",
-            "sentence31",
-            "sentence32",
-            "sentence33",
-            "sentence34",
-            "sentence35",
-            "sentence36",
-            "sentence37",
-            "sentence38",
-            "sentence39",
-            "sentence40",
-        ],
-    }
+    subject_names = data_config["subjects"]
+    sequence_names = data_config["sequences"]
 
     data_handler = DataHandler(
         subject_names=subject_names, sequence_names=sequence_names
     )
 
-    data_config = config["data"]
     batcher = Batcher(data_handler=data_handler, batch_size=data_config["batch_size"])
 
     training_config = config["training"]

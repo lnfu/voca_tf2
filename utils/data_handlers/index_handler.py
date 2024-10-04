@@ -15,7 +15,27 @@ class IndexHandler:
         self.sequence_names = sequence_names
         self.window_size = 2  # 考慮 velocity loss 需要到 2, 也許之後想要算 acceleration loss 就要用到　3
 
+        self.indices_by_subject_and_sequence = pickle.load(
+            open("data/subj_seq_to_idx.pkl", "rb")
+        )
+
         self.generate_windows()
+
+    def get_indices_by_subject_and_sequence(
+        self, subject_name: str, sequence_name: str
+    ):
+        # indices = [(frame_index, mesh_index), ...]
+
+        if subject_name not in self.indices_by_subject_and_sequence:
+            logging.warning(f"Index 資料不存在 Subject = {subject_name}, Sequence = *")
+            return []
+        if sequence_name not in self.indices_by_subject_and_sequence[subject_name]:
+            logging.debug(
+                f"Index 資料不存在 Subject = {subject_name}, Sequence = {sequence_name}"
+            )
+            return []
+
+        return self.indices_by_subject_and_sequence[subject_name][sequence_name]
 
     def generate_windows(self):
         # 每個 window 都是一個 dict()
@@ -24,11 +44,6 @@ class IndexHandler:
         # window["indices"] = [?, ?]
 
         splits = ["train", "val", "test"]
-
-        # TODO refactor .npy 檔案內容 (拋棄 local_index, 但是要先檢查它沒有用處)
-        indices_by_subject_and_sequence = pickle.load(
-            open("data/subj_seq_to_idx.pkl", "rb")
-        )
 
         self.windows = {}
 
@@ -40,7 +55,7 @@ class IndexHandler:
 
             for subject_name in subject_names:
                 for sequence_name in sequence_names:
-                    if subject_name not in indices_by_subject_and_sequence:
+                    if subject_name not in self.indices_by_subject_and_sequence:
                         logging.debug(
                             f"Index 資料不存在 Subject = {subject_name}, Sequence = *"
                         )
@@ -48,21 +63,21 @@ class IndexHandler:
 
                     if (
                         sequence_name
-                        not in indices_by_subject_and_sequence[subject_name]
+                        not in self.indices_by_subject_and_sequence[subject_name]
                     ):
                         logging.debug(
                             f"Index 資料不存在 Subject = {subject_name}, Sequence = {sequence_name}"
                         )
                         continue
 
-                    raw_indices = indices_by_subject_and_sequence[subject_name][
+                    raw_indices = self.indices_by_subject_and_sequence[subject_name][
                         sequence_name
                     ]
                     num_raw_indices = len(raw_indices)
 
                     indices = []
-                    for frame_index, mesh_index in raw_indices.items():
-                        indices.append((frame_index, mesh_index))
+                    for frame_index, pcd_index in raw_indices.items():
+                        indices.append((frame_index, pcd_index))
 
                     for i in range(len(indices)):
                         window_indices = [None] * self.window_size
@@ -77,4 +92,3 @@ class IndexHandler:
                         window["sequence"] = sequence_name
                         window["indices"] = window_indices
                         self.windows[split].append(window)
-

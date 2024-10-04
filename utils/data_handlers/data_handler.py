@@ -22,13 +22,27 @@ class DataHandler:
             subject_names=subject_names, sequence_names=sequence_names
         )
 
-        self.audio_processed_data = self.audio_data_handler.get_processed_training_data()
+        self.audio_processed_data = (
+            self.audio_data_handler.get_processed_training_data()
+        )
 
     def get_training_subject_id_by_name(self, name):
         try:
             return self.subject_names["train"].index(name)
         except ValueError:
             return np.random.randint(0, len(self.subject_names["train"]))
+
+    def get_template_pcd_by_subject(self, subject_name: str):
+        return self.pcd_data_handler.template_pcds[subject_name]
+
+    def get_pcds_by_subject_and_sequence(self, subject_name: str, sequence_name: str):
+        indices = self.index_data_handler.get_indices_by_subject_and_sequence(
+            subject_name=subject_name, sequence_name=sequence_name
+        )
+        return [
+            self.pcd_data_handler.get_pcd_by_index(pcd_index)
+            for frame_index, pcd_index in indices.items()
+        ]
 
     def get_data_by_batch_windows(self, batch_windows: list[list]) -> tuple:
 
@@ -47,9 +61,7 @@ class DataHandler:
             subject_name = window["subject"]
             sequence_name = window["sequence"]
             if subject_name not in self.audio_processed_data:
-                logging.debug(
-                    f"音訊資料不存在 Subject = {subject_name}, Sequence = *"
-                )
+                logging.debug(f"音訊資料不存在 Subject = {subject_name}, Sequence = *")
                 continue
             if sequence_name not in self.audio_processed_data[subject_name]:
                 logging.debug(
@@ -72,18 +84,23 @@ class DataHandler:
                 continue
 
             for frame_index, pcd_index in window["indices"]:
-                pcd_indices.append(pcd_index)
+                subject_ids.append(self.get_training_subject_id_by_name(subject_name))
                 audios.append(
                     self.audio_processed_data[subject_name][sequence_name][frame_index]
                 )
-                subject_ids.append(self.get_training_subject_id_by_name(subject_name))
                 template_pcds.append(
                     self.pcd_data_handler.template_pcds[subject_name]
                 )  # TODO check 存在
-                break # TODO 之後刪掉!
+                pcd_indices.append(pcd_index)
+                break  # TODO 之後刪掉! --> velocity loss
 
         label_pcds = self.pcd_data_handler.pcds[pcd_indices]
-        return np.array(subject_ids), np.array(template_pcds), np.array(audios), label_pcds
+        return (
+            np.array(subject_ids),
+            np.array(audios),
+            np.array(template_pcds),
+            label_pcds,
+        )
 
     def get_windows_by_split(self, split):
         return self.index_data_handler.windows[split]

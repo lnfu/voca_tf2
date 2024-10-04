@@ -14,4 +14,8 @@ class PointCloudHandler:
         )
 
     def load_pcds(self):
-        self.pcds = np.load("data/data_verts.npy", mmap_mode="r")
+        self.pcds = np.load("data/data_verts.npy", mmap_mode="r")  # (123341, 5023, 3)
+
+    def get_pcd_by_index(self, index: int):
+        return self.pcds[index]
+    

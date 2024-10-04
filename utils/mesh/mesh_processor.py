@@ -13,11 +13,20 @@ from psbody.mesh import Mesh
 
 
 class MeshProcessor:
-    def __init__(self, pcds, template: Mesh) -> None:
+    def __init__(self, pcds=None, delta_pcds=None, template: Mesh=None) -> None:
 
-        self.meshes = np.array([Mesh(pcd, template.f) for pcd in pcds])
+        if pcds is not None:
+            faces = []
+            with open("data/faces.txt", "r") as face_file:
+                for line in face_file:
+                    faces.append(line.split(" "))
+        elif delta_pcds is not None and template is not None:
+            faces = template.f
+            pcds = delta_pcds + template.v
+        else:
+            raise ValueError("You must provide either 'pcds' or both 'delta_pcds' and 'template'.")
 
-        # pcds.shape = (?, 5023, 3)
+        self.meshes = np.array([Mesh(pcd, faces) for pcd in pcds])
         centers = np.mean(pcds, axis=1)  # (?, 3)
         self.center = np.mean(centers, axis=0)  # (3, )
 
