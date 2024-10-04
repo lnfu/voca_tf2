@@ -44,3 +44,4 @@ pyopengl 必須安裝 3.1.4
 - [ ] 研究 cuDNN, cuFFT, and cuBLAS
 - [ ] 撰寫 Docker Compose file
 - [ ] 自己寫簡單版本的 psbody.mesh (只需要簡單的建立、儲存功能即可)
+- [ ] function type hint (單層的全部補上)
