@@ -1,9 +1,11 @@
+# TODO refactor: conv2d 抽出來成一個 method
+
 import tensorflow as tf
 
 from .batcher import Batcher
 
 
-# TODO refactor
+# TODO refactor: rename function name
 def custom_loss(y_true, y_pred):  # (?, 5023, 3)
     squared_diff = tf.math.squared_difference(y_pred, y_true)  # (?, 5023, 3)
     error_sum = tf.math.reduce_sum(squared_diff, axis=2)  # (?, 5023)
@@ -20,8 +22,7 @@ class Model:
         self.epochs = epochs
         self.validation_steps = validation_steps
 
-    def train(self):
-
+    def build_model(self):
         subject_id_ont_hot_shape = (None,)
         template_pcd_shape = (None, 5023, 3)
         deepspeech_feature_shape = (None, 16, 29)
@@ -32,11 +33,15 @@ class Model:
         c = tf.keras.layers.CategoryEncoding(num_tokens=8, output_mode="one_hot")(
             input_c
         )  # (None, 8,)
+
+        # Batch Normalization
         x = tf.keras.layers.BatchNormalization(epsilon=1e-5, momentum=0.9)(input_x)
-        x = tf.keras.layers.Reshape((16, 1, 29))(x)  # (None, 16, 1, 29)
+
+        # x = tf.keras.layers.Reshape((16, 1, 29))(x)  # (None, 16, 1, 29) # TODO remove
+        x = tf.reshape(x, (-1, 16, 1, 29)) # (None, 16, 1, 29)
 
         # 第一次　Identity concat　加上　subject_id_ont_hot
-        x = tf.keras.layers.Concatenate(axis=-1)(
+        x = tf.keras.layers.Concatenate(axis=-1, name="id_concat1")(
             [
                 x,
                 tf.keras.layers.Lambda(lambda x: tf.tile(x, [1, 16, 1, 1]))(
@@ -90,19 +95,22 @@ class Model:
         x = tf.keras.layers.Flatten()(conv4)
 
         # 第二次　Identity concat　加上　subject_id_ont_hot
-        x = tf.keras.layers.Concatenate(axis=-1)([x, c])
+        x = tf.keras.layers.Concatenate(axis=-1, name="id_concat2")([x, c])
 
         fc1 = tf.keras.layers.Dense(units=128, activation="tanh", name="fc1")(x)
         fc2 = tf.keras.layers.Dense(units=50, activation=None, name="fc2")(fc1)
-        fc3 = tf.keras.layers.Dense(units=5023 * 3, activation=None, name="fc3")(fc2)
+        fc3 = tf.keras.layers.Dense(units=5023 * 3, activation=None, name="fc3")(fc2) # (?, 5023 * 3)
 
-        x = tf.keras.layers.Reshape((5023, 3))(fc3)
+        x = tf.keras.layers.Reshape((5023, 3))(fc3) # (?, 5023, 3)
 
-        y = tf.keras.layers.Add()([x, input_t])
+        y = tf.keras.layers.Add(name="add")([x, input_t])
 
-        model = tf.keras.Model(inputs=[input_c, input_t, input_x], outputs=y)
+        return tf.keras.Model(inputs=[input_c, input_t, input_x], outputs=y)
 
-        # TODO refactor
+    def train(self):
+
+        model = self.build_model()
+
         def data_generator(split):
             self.batcher.set_split(split)
             while True:
