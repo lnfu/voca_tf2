@@ -14,7 +14,7 @@ def custom_loss(y_true, y_pred):  # (?, 5023, 3)
 
     squared_diff = tf.math.squared_difference(pred_pcd, true_pcd)  # (?, 5023, 3)
     error_sum = tf.math.reduce_sum(squared_diff, axis=2)  # (?, 5023)
-    mean_error = tf.math.reduce_mean(error_sum)
+    mean_error = tf.math.reduce_sum(error_sum)
     return mean_error
 
 
