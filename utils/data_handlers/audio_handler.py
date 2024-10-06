@@ -42,8 +42,7 @@ class AudioHandler:
             return pickle.load(open(self.processed_data_path, "rb"), encoding="latin1")
 
         logging.info(f"音訊尚未處理")
-        # 也許就直接搞自己的 dataset 就不用多這些步驟?
-        # 換個角度想, 不要動　dataset 好像比較合理?
+
         # TODO 檢查　raw_data_path 使否存在
         raw_data = pickle.load(open(self.raw_data_path, "rb"), encoding="latin1")
 

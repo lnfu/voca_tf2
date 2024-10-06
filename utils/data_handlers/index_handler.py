@@ -6,89 +6,45 @@ import logging
 
 class IndexHandler:
 
-    def __init__(
-        self,
-        subject_names: dict[str, list[str]],
-        sequence_names: dict[str, list[str]],
-    ):
-        self.subject_names = subject_names
-        self.sequence_names = sequence_names
-        self.window_size = 2  # 考慮 velocity loss 需要到 2, 也許之後想要算 acceleration loss 就要用到　3
+    def __init__(self):
+        self.max_window_size = 5  # TODO
+        self.indices_by_subject_and_sequence = pickle.load(open("data/subj_seq_to_idx.pkl", "rb"))
+        self.generate_indix_windows()
 
-        self.indices_by_subject_and_sequence = pickle.load(
-            open("data/subj_seq_to_idx.pkl", "rb")
-        )
-
-        self.generate_windows()
-
-    def get_indices_by_subject_and_sequence(
-        self, subject_name: str, sequence_name: str
-    ):
+    # TODO: deprecated??
+    def get_indices_by_subject_and_sequence(self, subject_name: str, sequence_name: str):
         # indices = [(frame_index, mesh_index), ...]
 
         if subject_name not in self.indices_by_subject_and_sequence:
             logging.warning(f"Index 資料不存在 Subject = {subject_name}, Sequence = *")
             return []
         if sequence_name not in self.indices_by_subject_and_sequence[subject_name]:
-            logging.debug(
-                f"Index 資料不存在 Subject = {subject_name}, Sequence = {sequence_name}"
-            )
+            logging.debug(f"Index 資料不存在 Subject = {subject_name}, Sequence = {sequence_name}")
             return []
 
         return self.indices_by_subject_and_sequence[subject_name][sequence_name]
 
-    def generate_windows(self):
-        # 每個 window 都是一個 dict()
-        # window["subject"]
-        # window["sequence"]
-        # window["indices"] = [?, ?]
+    def get_index_windws(self):
+        return self.index_windows
 
-        splits = ["train", "val", "test"]
+    def generate_indix_windows(self):
 
-        self.windows = {}
+        def build_index_window(indices, start_idx, max_window_size):
+            index_window = [None] * max_window_size
+            for j in range(max_window_size):
+                k = start_idx + j
+                if k < len(indices):
+                    index_window[j] = indices[k]
+            return index_window
 
-        for split in splits:
-            subject_names = self.subject_names[split]
-            sequence_names = self.sequence_names[split]
+        self.index_windows = {}
 
-            self.windows[split] = []
+        for subject_name, subject_data in self.indices_by_subject_and_sequence.items():
+            self.index_windows[subject_name] = {}
 
-            for subject_name in subject_names:
-                for sequence_name in sequence_names:
-                    if subject_name not in self.indices_by_subject_and_sequence:
-                        logging.debug(
-                            f"Index 資料不存在 Subject = {subject_name}, Sequence = *"
-                        )
-                        continue
+            for sequence_name, sequence_data in subject_data.items():
 
-                    if (
-                        sequence_name
-                        not in self.indices_by_subject_and_sequence[subject_name]
-                    ):
-                        logging.debug(
-                            f"Index 資料不存在 Subject = {subject_name}, Sequence = {sequence_name}"
-                        )
-                        continue
-
-                    raw_indices = self.indices_by_subject_and_sequence[subject_name][
-                        sequence_name
-                    ]
-                    num_raw_indices = len(raw_indices)
-
-                    indices = []
-                    for frame_index, pcd_index in raw_indices.items():
-                        indices.append((frame_index, pcd_index))
-
-                    for i in range(len(indices)):
-                        window_indices = [None] * self.window_size
-                        for j in range(self.window_size):
-                            k = i + j
-                            if k >= len(indices):
-                                continue
-                            window_indices[j] = indices[k]
-
-                        window = {}
-                        window["subject"] = subject_name
-                        window["sequence"] = sequence_name
-                        window["indices"] = window_indices
-                        self.windows[split].append(window)
+                indices = list(sequence_data.items())
+                self.index_windows[subject_name][sequence_name] = [
+                    build_index_window(indices, i, self.max_window_size) for i in range(len(indices))
+                ]

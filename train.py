@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 
 import sys
@@ -25,11 +26,22 @@ def main():
     subject_names = data_config["subjects"]
     sequence_names = data_config["sequences"]
 
-    data_handler = DataHandler(
-        subject_names=subject_names, sequence_names=sequence_names
-    )
+    data_handler = DataHandler()
 
-    batcher = Batcher(data_handler=data_handler, batch_size=data_config["batch_size"])
+    batcher = Batcher(
+        data_handler=data_handler,
+        subject_names=subject_names["train"],
+        sequence_names=sequence_names["train"],
+        batch_size=data_config["batch_size"],
+        window_size=2,
+    )
+    batch_subject_id, batch_audio, batch_template_pcd, batch_pcd = batcher.get_next()
+    print(batch_pcd.shape)
+    print(batch_audio.shape)
+    print(batch_template_pcd.shape)
+    print(batch_subject_id.shape)
+
+    exit(0)
 
     training_config = config["training"]
     model = Model(

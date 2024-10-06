@@ -1,64 +1,88 @@
+import numpy as np
+
 from utils.data_handlers.data_handler import DataHandler
 
 
 class Batcher:
+    def get_num_data(self):
+        return len(self.data)
+
+    def get_num_batches(self, split):
+        return self.get_num_data(split) // self.batch_size
+
+    def get_num_subjects(self):
+        return len(self.subject_names)
+
+    def get_subject_id_by_name(self, name: str):
+        try:
+            return self.subject_names.index(name)
+        except ValueError:
+            return np.random.randint(0, len(self.subject_names))  # TODO 之後也可以都用 0 試試看
+
     def __init__(
         self,
         data_handler: DataHandler,
+        subject_names: set[str],
+        sequence_names: set[str],
         batch_size: int = 64,
+        window_size: int = 1,  # 主要計算 loss (velocity) 才會用到
     ):
 
         self.data_handler = data_handler
         self.batch_size = batch_size
+        self.window_size = window_size
+        self.subject_names = subject_names
 
-        # TODO refactor (好像直接整個移過來, 不需要在分 3 個多餘)
-        self.windows = {}
-        self.windows["train"] = self.data_handler.get_windows_by_split("train")
-        self.windows["val"] = self.data_handler.get_windows_by_split("val")
-        self.windows["test"] = self.data_handler.get_windows_by_split("test")
+        # filter
+        filtered = {
+            subject_name: {
+                sequence_name: [
+                    window[: self.window_size]  # 每個 window 只取前 self.window_size 並且不能有 None
+                    for window in sequence_data
+                    if all(window_item is not None for window_item in window[: self.window_size])
+                ]
+                for sequence_name, sequence_data in subject_data.items()
+                if sequence_name in sequence_names
+            }
+            for subject_name, subject_data in self.data_handler.data.items()
+            if subject_name in subject_names
+        }
 
-        if True:
-            for split in self.windows:
-                self.shuffle_data(split)
+        # flatten
+        self.data = [
+            window
+            for subject_data in filtered.values()
+            for sequence_data in subject_data.values()
+            for window in sequence_data
+        ]
 
-        self.current_index = 0
-        self.current_split = "train"
-
-    def get_num_windows(self, split):
-        return len(self.windows[split])
-
-    def get_num_batches(self, split):
-        return self.get_num_windows(split) // self.batch_size
-
-    def set_split(self, split="train"):
-        if split not in self.windows:
-            raise ValueError(f"Unknown split: {split}")
-        self.current_split = split
-        self.reset(self.current_split)
+        self.reset()
 
     def get_next(self):
 
-        splitted_windows = self.windows[self.current_split]
+        if self.current_index >= len(self.data):
+            self.reset()
 
-        if self.current_index >= len(splitted_windows):
-            self.reset(self.current_split)
-
-        batch_windows = splitted_windows[
+        batch_data_index_only = self.data[
             self.current_index : self.current_index + self.batch_size
-        ]
+        ]  # 這種寫法右界超過也沒關係
 
-        data = self.data_handler.get_data_by_batch_windows(batch_windows)
+        batch_subject_name, batch_audio, batch_template_pcd, batch_pcd = self.data_handler.unpack_data(
+            batch_data_index_only
+        )
 
-        self.current_index += self.batch_size
+        batch_subject_id = [self.get_subject_id_by_name(subject_name) for subject_name in batch_subject_name]
 
-        return data  # subject_ids, audios, template_pcds, label_pcds
+        self.current_index += self.batch_size  # 更新 current_index
 
-    def reset(self, split: str):
+        return np.array(batch_subject_id), batch_audio, batch_template_pcd, batch_pcd
+
+    def reset(self):
         self.current_index = 0
         if True:
-            self.shuffle_data(split)
+            self.shuffle_data()
 
-    def shuffle_data(self, split: str):
+    def shuffle_data(self):
         import random
 
-        random.shuffle(self.windows[split])
+        random.shuffle(self.data)
