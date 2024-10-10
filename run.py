@@ -5,12 +5,10 @@
 import numpy as np
 import tensorflow as tf
 
-import os
 import sys
-import cv2
 import logging
+import meshio
 
-from psbody.mesh import Mesh
 from scipy.io import wavfile
 
 from utils.config import load_config
@@ -37,8 +35,7 @@ logging.basicConfig(
 def main():
     config = load_config("config.yaml")
 
-    template = Mesh(filename="data/FLAME_sample.ply")
-    print(template.v.shape)
+    template: meshio.Mesh = meshio.read(filename="data/FLAME_sample.ply", file_format="ply")
 
     sample_rate, audio = wavfile.read("data/sample.wav")
 
@@ -75,8 +72,8 @@ def main():
 
     mesh_processor = MeshProcessor(delta_pcds=delta_pcds, template=template)
 
-    mesh_processor.save_to_obj_files()
-    mesh_processor.render_to_video()
+    mesh_processor.save_to_obj_files(dir_path=config["output_dir"])
+    mesh_processor.render_to_video(dir_path=config["output_dir"])
 
 
 if __name__ == "__main__":

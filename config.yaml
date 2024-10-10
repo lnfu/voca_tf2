@@ -1,6 +1,6 @@
-model_dir: "modells/"
+model_dir: "models/"
 checkpoint_dir: "checkpoints/"
-output_dir: "output/"
+output_dir: "outputs/"
 
 data:
   batch_size: 64

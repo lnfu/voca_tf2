@@ -4,16 +4,14 @@ import cv2
 import logging
 import trimesh
 import pyrender
-
-from psbody.mesh import Mesh
+import meshio
 
 
 class MeshRenderer:
     def __init__(self) -> None:
         pass
 
-
-    def render_mesh_to_image(self, mesh, center, rotation=np.zeros(3)):
+    def render_mesh_to_image(self, mesh: meshio.Mesh, center, rotation=np.zeros(3)):
 
         camera_params = {
             "optical_center": [400.0, 400.0],
@@ -52,15 +50,16 @@ class MeshRenderer:
         ]  # 往 z 平移一單位
         scene.add(light, pose=light_pose)
 
-        mesh_copy = Mesh(mesh.v, mesh.f)
+        mesh_copy = meshio.Mesh(points=mesh.points, cells=mesh.cells)
 
         # 圍繞 center 做旋轉 rotation
-        mesh_copy.v[:] = cv2.Rodrigues(rotation)[0].dot((mesh_copy.v - center).T).T + center
+        mesh_copy.points[:] = cv2.Rodrigues(rotation)[0].dot((mesh_copy.points - center).T).T + center
 
         # trimesh 上色 (沒有色彩)
-        tri_mesh = trimesh.Trimesh(
-            vertices=mesh_copy.v, faces=mesh_copy.f, vertex_colors=None
-        )
+        triangles = np.vstack([cell.data for cell in mesh_copy.cells if cell.type == "triangle"])
+
+        print(len(triangles))
+        tri_mesh = trimesh.Trimesh(vertices=mesh_copy.points, faces=triangles, vertex_colors=None)
 
         # pyrender mesh
         render_mesh = pyrender.Mesh.from_trimesh(tri_mesh, smooth=True)
@@ -74,8 +73,6 @@ class MeshRenderer:
             colors, _ = renderer.render(scene, flags=pyrender.RenderFlags.SKIP_CULL_FACES)
         except Exception as e:
             logging.error("pyrender: An error occurred while rendering: %s", e)
-            colors = np.zeros(
-                (frustum_params["height"], frustum_params["width"], 3), dtype="uint8"
-            )
+            colors = np.zeros((frustum_params["height"], frustum_params["width"], 3), dtype="uint8")
 
         return colors[..., ::-1]

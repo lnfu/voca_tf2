@@ -1,0 +1,70 @@
+services:
+  train:
+    image: nvcr.io/nvidia/tensorflow:23.07-tf2-py3 # or switch to 24.09-tf2-py3 if needed
+    runtime: nvidia
+    environment:
+      - TF_CPP_MIN_LOG_LEVEL=1
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    stdin_open: true
+    tty: true
+    command: >
+      bash -c "
+        pip install resampy python_speech_features &&
+        python train.py
+      "
+
+  run:
+    image: nvcr.io/nvidia/tensorflow:23.07-tf2-py3 # or switch to 24.09-tf2-py3 if needed
+    runtime: nvidia
+    environment:
+      - TF_CPP_MIN_LOG_LEVEL=1
+      - PYOPENGL_PLATFORM=osmesa
+      - MUJOCO_GL=osmesa
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    stdin_open: true
+    tty: true
+    command: >
+      bash -c "
+        apt update -y &&
+        apt install -y libosmesa6 ffmpeg &&
+        pip install resampy python_speech_features opencv-python trimesh pyrender meshio pyopengl==3.1.4 &&
+        python run.py
+      "
+
+  dev:
+    image: nvcr.io/nvidia/tensorflow:23.07-tf2-py3 # or switch to 24.09-tf2-py3 if needed
+    runtime: nvidia
+    environment:
+      - PYOPENGL_PLATFORM=osmesa
+      - MUJOCO_GL=osmesa
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    stdin_open: true
+    tty: true
+    command: >
+      bash -c "
+        apt update -y &&
+        apt install -y libosmesa6 ffmpeg &&
+        pip install resampy python_speech_features opencv-python trimesh pyrender meshio pyopengl==3.1.4 &&
+        tail -f /dev/null
+      "

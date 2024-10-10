@@ -1,26 +1,52 @@
 # VOCA 使用 TensorFlow 2 重寫
 
+## Training
+
 ```sh
-docker run --gpus all -it -v .:/workspace  --rm nvcr.io/nvidia/tensorflow:23.07-tf2-py3 bash
-# docker run --gpus all -it -v .:/workspace  --rm nvcr.io/nvidia/tensorflow:24.09-tf2-py3 bash
-pip install pyyaml resampy python_speech_features scipy trimesh pyrender
-export TF_CPP_MIN_LOG_LEVEL=1
+docker compose up train
+```
 
-apt install -y ffmpeg 
-apt install -y libosmesa6
+### Environment Variables
 
+- `TF_CPP_MIN_LOG_LEVEL=1`
 
-# run.py
+### Python Packages
 
-apt update -y
-apt install -y libboost-dev 
-cd mesh
-# apt install python3-opengl
-BOOST_INCLUDE_DIRS=/usr/include/boost make all
-cd ..
+- `resampy`
+- `python_speech_features`
 
-export PYOPENGL_PLATFORM=osmesa
-export MUJOCO_GL=osmesa
+### Ubuntu Packages
+
+## Inference
+
+```sh
+docker compose up run
+```
+
+### Environment Variables
+
+- `PYOPENGL_PLATFORM=osmesa`
+- `MUJOCO_GL=osmesa`
+
+### Python Packages
+
+- `resampy`
+- `python_speech_features`
+- `opencv-python`
+- `trimesh`
+- `pyrender`
+- `meshio`
+- `pyopengl==3.1.4`
+
+### Ubuntu Packages
+
+- `libosmesa6`
+- `ffmpeg`
+
+## For Developers
+
+```sh
+docker compose up dev
 ```
 
 ## 規範
@@ -31,15 +57,6 @@ export MUJOCO_GL=osmesa
 mesh to image 使用 pyrender
 
 影片加上音訊使用 ffmpeg
-
-<!-- pyrender 需要安裝 mesa (opengl 相關)
-```sh
-apt update
-wget https://github.com/mmatl/travis_debs/raw/master/xenial/mesa_18.3.3-0.deb
-dpkg -i ./mesa_18.3.3-0.deb || true
-apt install -f
-apt --fix-broken install
-``` -->
 
 忽略 pyrender 對 pyopengl 版本的要求: https://blog.csdn.net/guntangsanjing/article/details/127651381
 

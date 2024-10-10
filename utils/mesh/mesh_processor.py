@@ -7,37 +7,38 @@ import tensorflow as tf
 import os
 import cv2
 import logging
+import meshio
 
 from .mesh_render import MeshRenderer
-from psbody.mesh import Mesh
 
 
 class MeshProcessor:
-    def __init__(self, pcds=None, delta_pcds=None, template: Mesh=None) -> None:
+    def __init__(self, pcds=None, delta_pcds=None, template: meshio.Mesh = None) -> None:
 
         if pcds is not None:
-            faces = []
-            with open("data/faces.txt", "r") as face_file:
+            triangles = []
+            with open("data/triangles.txt", "r") as face_file:
                 for line in face_file:
-                    faces.append(line.split(" "))
+                    triangles.append(line.split(" "))
+            faces = [("triangle", triangles)]
         elif delta_pcds is not None and template is not None:
-            faces = template.f
-            pcds = delta_pcds + template.v
+            faces = template.cells
+            pcds = delta_pcds + template.points
         else:
             raise ValueError("You must provide either 'pcds' or both 'delta_pcds' and 'template'.")
 
-        self.meshes = np.array([Mesh(pcd, faces) for pcd in pcds])
+        self.meshes = [meshio.Mesh(points=pcd, cells=faces) for pcd in pcds]
         centers = np.mean(pcds, axis=1)  # (?, 3)
         self.center = np.mean(centers, axis=0)  # (3, )
 
-    def render_to_video(self):
+    def render_to_video(self, dir_path: str):
 
         mesh_renderer = MeshRenderer()
         progbar = tf.keras.utils.Progbar(self.num_frames)
         # save
         # with open("output/sample.mp4", "w") as f:
         video_writer = cv2.VideoWriter(
-            "outputss/sample.mp4",  # TODO
+            os.path.join(dir_path, "sample.mp4"),  # TODO
             cv2.VideoWriter_fourcc(*"mp4v"),
             60,
             (800, 800),
@@ -51,14 +52,14 @@ class MeshProcessor:
         video_writer.release()
         logging.info("影片處理完成!")
 
-    def save_to_obj_files(self):
+    def save_to_obj_files(self, dir_path: str):
         progbar = tf.keras.utils.Progbar(self.num_frames)
 
         for i, mesh in enumerate(self.meshes):
-            mesh.write_obj(os.path.join("outputss/meshes/", "%05d.obj" % i))  # TODO
+            mesh.write(os.path.join(dir_path, "meshes", "%05d.obj" % i), file_format="obj")
             progbar.update(i + 1)
         logging.info("OBJ files 存檔完成!")
 
     @property
     def num_frames(self):
-        return self.meshes.shape[0]
+        return len(self.meshes)
