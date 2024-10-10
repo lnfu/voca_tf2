@@ -59,7 +59,7 @@ def main():
 
     logging.info("正在載入 VOCA 模型...")
     tf.keras.utils.get_custom_objects()["custom_loss"] = custom_loss
-    model = tf.keras.models.load_model("models")
+    model = tf.keras.models.load_model(config["model_dir"])
     logging.info("VOCA 模型成功載入!")
 
     delta_pcds = model.predict(
@@ -68,6 +68,7 @@ def main():
             processed_audio,
         ]
     )
+
     logging.info("預測完成, 開始寫入資料...")
 
     assert num_frames == delta_pcds.shape[0]  # TODO

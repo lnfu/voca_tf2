@@ -80,9 +80,9 @@ class DataHandler:
 
         return (
             batch_subject_name,
-            np.array(batch_audio),
             np.array(batch_template_pcd),
-            np.array(batch_pcd),
+            np.transpose(np.array(batch_pcd), (0, 2, 3, 1)),
+            np.transpose(np.array(batch_audio), (0, 2, 3, 1)),
         )
 
     # TODO: deprecated?

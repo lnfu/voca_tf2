@@ -37,7 +37,7 @@ class MeshProcessor:
         # save
         # with open("output/sample.mp4", "w") as f:
         video_writer = cv2.VideoWriter(
-            "outputs/sample.mp4",  # TODO
+            "outputss/sample.mp4",  # TODO
             cv2.VideoWriter_fourcc(*"mp4v"),
             60,
             (800, 800),
@@ -55,7 +55,7 @@ class MeshProcessor:
         progbar = tf.keras.utils.Progbar(self.num_frames)
 
         for i, mesh in enumerate(self.meshes):
-            mesh.write_obj(os.path.join("outputs/meshes/", "%05d.obj" % i))  # TODO
+            mesh.write_obj(os.path.join("outputss/meshes/", "%05d.obj" % i))  # TODO
             progbar.update(i + 1)
         logging.info("OBJ files 存檔完成!")
 

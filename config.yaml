@@ -1,3 +1,7 @@
+model_dir: "modells/"
+checkpoint_dir: "checkpoints/"
+output_dir: "output/"
+
 data:
   batch_size: 64
   shuffle: true # TODO

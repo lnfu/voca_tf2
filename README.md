@@ -9,12 +9,18 @@ export TF_CPP_MIN_LOG_LEVEL=1
 apt install -y ffmpeg 
 apt install -y libosmesa6
 
-cd mesh
+
+# run.py
+
 apt update -y
 apt install -y libboost-dev 
+cd mesh
 # apt install python3-opengl
 BOOST_INCLUDE_DIRS=/usr/include/boost make all
 cd ..
+
+export PYOPENGL_PLATFORM=osmesa
+export MUJOCO_GL=osmesa
 ```
 
 ## 規範

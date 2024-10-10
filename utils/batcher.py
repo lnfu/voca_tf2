@@ -7,8 +7,8 @@ class Batcher:
     def get_num_data(self):
         return len(self.data)
 
-    def get_num_batches(self, split):
-        return self.get_num_data(split) // self.batch_size
+    def get_num_batches(self):
+        return self.get_num_data() // self.batch_size
 
     def get_num_subjects(self):
         return len(self.subject_names)
@@ -67,7 +67,7 @@ class Batcher:
             self.current_index : self.current_index + self.batch_size
         ]  # 這種寫法右界超過也沒關係
 
-        batch_subject_name, batch_audio, batch_template_pcd, batch_pcd = self.data_handler.unpack_data(
+        batch_subject_name, batch_template_pcd, batch_pcd, batch_audio = self.data_handler.unpack_data(
             batch_data_index_only
         )
 
@@ -75,7 +75,12 @@ class Batcher:
 
         self.current_index += self.batch_size  # 更新 current_index
 
-        return np.array(batch_subject_id), batch_audio, batch_template_pcd, batch_pcd
+        return (
+            np.array(batch_subject_id),  # (None, 64, 8)
+            batch_template_pcd,  # (None, 5023, 3)
+            batch_pcd,  # (None, 5023, 3, 2)
+            batch_audio,  # (None, 16, 29, 2)
+        )
 
     def reset(self):
         self.current_index = 0
