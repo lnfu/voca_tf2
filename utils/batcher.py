@@ -26,12 +26,15 @@ class Batcher:
         sequence_names: set[str],
         batch_size: int = 64,
         window_size: int = 1,  # 主要計算 loss (velocity) 才會用到
+        shuffle: bool = True,
     ):
 
         self.data_handler = data_handler
         self.batch_size = batch_size
         self.window_size = window_size
         self.subject_names = subject_names
+
+        self.shuffle = shuffle
 
         # filter
         filtered = {
@@ -84,7 +87,7 @@ class Batcher:
 
     def reset(self):
         self.current_index = 0
-        if True:
+        if self.shuffle:
             self.shuffle_data()
 
     def shuffle_data(self):

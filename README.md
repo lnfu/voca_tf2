@@ -49,6 +49,16 @@ docker compose up run
 docker compose up dev
 ```
 
+## 合併影片、音訊
+
+推薦使用 Kdenlive 開源剪輯軟體
+
+也可以使用 ffmpeg
+
+```sh
+ffmpeg -i audio.wav -i video.mp4 -vcodec h264 -ac 2 -channel_layout stereo -pix_fmt yuv420p merged.mp4
+```
+
 ## 規範
 
 - mesh = vertex + face

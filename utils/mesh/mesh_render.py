@@ -15,7 +15,7 @@ class MeshRenderer:
 
         camera_params = {
             "optical_center": [400.0, 400.0],
-            "focal_length": [4754.97941935 / 2, 4754.97941935 / 2],  # TODO 數值???
+            "focal_length": [4754.97941935 / 2, 4754.97941935 / 2],  # TODO 數值?
         }
 
         frustum_params = {"near": 0.01, "far": 3.0, "height": 800, "width": 800}

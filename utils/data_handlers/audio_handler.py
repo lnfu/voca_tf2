@@ -5,17 +5,20 @@ import os
 import pickle
 import logging
 import resampy
+
 from python_speech_features import mfcc
+from common import check_file_exists
 
 
 class AudioHandler:
-    def __init__(self):
+    def __init__(self, raw_path, processed_path):
+        self.raw_path = raw_path
+        self.processed_path = processed_path
+
+        # TODO 寫進 config.yaml
         self.num_features = 29
         self.window_size = 16
         self.stride = 1
-
-        self.processed_data_path = "data/deepspeech.pkl"
-        self.raw_data_path = "data/raw_audio_fixed.pkl"
 
     def resample(self, input, sample_rate_in, sample_rate_out, output_length):
         input_length = input.shape[0]
@@ -31,25 +34,21 @@ class AudioHandler:
 
         output_features = np.zeros((output_length, num_features))
         for feat in range(num_features):
-            output_features[:, feat] = np.interp(
-                output_timestamps, input_timestamps, input[:, feat]
-            )
+            output_features[:, feat] = np.interp(output_timestamps, input_timestamps, input[:, feat])
         return output_features
 
     def get_processed_training_data(self):
-        if os.path.exists(self.processed_data_path):
-            logging.info(f"使用已處理過的音訊 {self.processed_data_path}")
-            return pickle.load(open(self.processed_data_path, "rb"), encoding="latin1")
+        if os.path.exists(self.processed_path):
+            logging.info(f"使用已處理過的音訊 {self.processed_path}")
+            return pickle.load(open(self.processed_path, "rb"), encoding="latin1")
 
         logging.info(f"音訊尚未處理")
 
-        # TODO 檢查　raw_data_path 使否存在
-        raw_data = pickle.load(open(self.raw_data_path, "rb"), encoding="latin1")
+        check_file_exists(self.raw_path)
+        raw_data = pickle.load(open(self.raw_path, "rb"), encoding="latin1")
 
         processed_data = self.batch_process(raw_data)
-        pickle.dump(
-            processed_data, open(self.processed_data_path, "wb")
-        )  # save processed_data
+        pickle.dump(processed_data, open(self.processed_path, "wb"))  # save processed_data
 
         return processed_data
 
@@ -60,7 +59,7 @@ class AudioHandler:
 
         # 先載入 deepspeech 模型 (好像是 6 層)
         # 輸入是 MFCC
-        # 輸出是 ??
+        # 輸出是 (16, 29)
 
         graph = tf.Graph()
 
@@ -86,12 +85,8 @@ class AudioHandler:
                 for sequence_name, sequence_data in subject_data.items():
 
                     sample_rate = sequence_data["sample_rate"]  # 22000 = 22 kHz
-                    raw_audio = sequence_data[
-                        "audio"
-                    ]  # ndarray, shape=(?,), dtype=int16
-                    logging.info(
-                        f"當前處理音訊: Subject = {subject_name}, Sequence = {sequence_name}"
-                    )
+                    raw_audio = sequence_data["audio"]  # ndarray, shape=(?,), dtype=int16
+                    logging.info(f"當前處理音訊: Subject = {subject_name}, Sequence = {sequence_name}")
 
                     resampled_audio = resampy.resample(
                         raw_audio.astype(np.float32),
@@ -134,9 +129,7 @@ class AudioHandler:
                     deepspeech_input = np.copy(
                         deepspeech_input
                     )  # 因為前面用 np.lib.stride_tricks.as_strided 只是回傳 view
-                    deepspeech_input = (
-                        deepspeech_input - np.mean(deepspeech_input)
-                    ) / np.std(deepspeech_input)
+                    deepspeech_input = (deepspeech_input - np.mean(deepspeech_input)) / np.std(deepspeech_input)
 
                     deepspeech_output = sess.run(
                         logits,
@@ -150,31 +143,16 @@ class AudioHandler:
                     duration = float(raw_audio.shape[0]) / sample_rate
                     # audio_len_s = float(audio_sample.shape[0]) / sample_rate
                     num_frames = int(round(duration * 60))
-                    deepspeech_output = self.resample(
-                        deepspeech_output[:, 0], 50, 60, output_length=num_frames
-                    )
+                    deepspeech_output = self.resample(deepspeech_output[:, 0], 50, 60, output_length=num_frames)
 
-                    self.window_size = 16  # TODO
-                    self.stride = 1  # TODO
-
-                    zero_pad = np.zeros(
-                        (int(self.window_size // 2), deepspeech_output.shape[1])
-                    )
-                    deepspeech_output = np.concatenate(
-                        (zero_pad, deepspeech_output, zero_pad), axis=0
-                    )
+                    zero_pad = np.zeros((int(self.window_size // 2), deepspeech_output.shape[1]))
+                    deepspeech_output = np.concatenate((zero_pad, deepspeech_output, zero_pad), axis=0)
 
                     processed_sequence_data = []
-                    for idx in range(
-                        0, deepspeech_output.shape[0] - self.window_size, self.stride
-                    ):
-                        processed_sequence_data.append(
-                            deepspeech_output[idx : idx + self.window_size]
-                        )
+                    for idx in range(0, deepspeech_output.shape[0] - self.window_size, self.stride):
+                        processed_sequence_data.append(deepspeech_output[idx : idx + self.window_size])
 
-                    processed_subject_data[sequence_name] = np.array(
-                        processed_sequence_data
-                    )
+                    processed_subject_data[sequence_name] = np.array(processed_sequence_data)
 
                 processed_data[subject_name] = processed_subject_data
 

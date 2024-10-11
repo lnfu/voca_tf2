@@ -4,15 +4,15 @@ import pickle
 
 
 class PointCloudHandler:
-    def __init__(self):
-        self.load_template_pcds()
-        self.load_pcds()
+    def __init__(self, data_path, template_path):
+        self.load_template_pcds(template_path)
+        self.load_pcds(data_path)
 
-    def load_template_pcds(self):
-        self.template_pcds = pickle.load(open("data/templates.pkl", "rb"), encoding="latin1")
+    def load_template_pcds(self, filepath: str):
+        self.template_pcds = pickle.load(open(filepath, "rb"), encoding="latin1")
 
-    def load_pcds(self):
-        self.pcds = np.load("data/data_verts.npy", mmap_mode="r")  # (123341, 5023, 3)
+    def load_pcds(self, filepath: str):
+        self.pcds = np.load(filepath, mmap_mode="r")  # (123341, 5023, 3)
 
     def get_template_pcd_by_subject_name(self, subject_name: str):
         return self.template_pcds[subject_name]

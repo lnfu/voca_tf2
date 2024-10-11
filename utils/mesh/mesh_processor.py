@@ -1,4 +1,3 @@
-# TODO 把 psbody.mesh 用這個完整取代 (psbody.mesh 有太多功能我不需要)
 # TODO 自訂儲存路徑
 
 import numpy as np

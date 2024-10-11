@@ -1,5 +1,3 @@
-# TODO refactor: conv2d 抽出來成一個 method
-
 import numpy as np
 import tensorflow as tf
 
@@ -8,40 +6,37 @@ import logging
 from .batcher import Batcher
 
 
-# TODO refactor: rename function name
-
-
-def compute_pcd_squared_difference(x, y):
+def compute_pcd_sse(x, y):
     squared_difference_per_point = tf.math.squared_difference(x, y)  # (?, 5023, 3)
     squared_difference_sum_per_point = tf.math.reduce_sum(squared_difference_per_point, axis=2)  # (?, 5023)
     total_squared_difference = tf.math.reduce_sum(squared_difference_sum_per_point)  # (?)
     return total_squared_difference
 
 
-def custom_loss(y_true, y_pred):  # (?, 5023, 3)
-    # y_true = (None, 5023, 3, 2) --> template + gt
-
-    pred_pcd_prev = y_pred[..., 0] + y_true[..., 0]  # (None, 5023, 3)
-    pred_pcd_current = y_pred[..., 1] + y_true[..., 0]  # (None, 5023, 3)
-
-    true_pcd_prev = y_true[..., 1]  # (None, 5023, 3)
-    true_pcd_current = y_true[..., 2]  # (None, 5023, 3)
-
-    position_squared_difference = compute_pcd_squared_difference(pred_pcd_current, true_pcd_current)
-
-    pred_pcd_diff = pred_pcd_current - pred_pcd_prev  # (None, 5023, 3)
-    true_pcd_diff = true_pcd_current - true_pcd_prev  # (None, 5023, 3)
-
-    velocity_squared_difference = compute_pcd_squared_difference(pred_pcd_diff, true_pcd_diff)
-
-    return position_squared_difference + velocity_squared_difference
+def build_conv_layer(
+    name: str,
+    x,
+    filters: int,
+    kernel_size=(3, 1),
+    strides=(2, 1),
+    padding: str = "same",
+    activation: str = "relu",
+):
+    return tf.keras.layers.Conv2D(
+        filters=filters,
+        kernel_size=kernel_size,
+        strides=strides,
+        padding=padding,
+        activation=activation,
+        name=name,
+    )(x)
 
 
 # TODO 用 dataclass decorator 簡化 constructor
 class Model:
     def __init__(
         self,
-        train_batcher: Batcher,  #
+        train_batcher: Batcher,
         val_batcher: Batcher,
         test_batcher: Batcher,
         learning_rate: float,
@@ -56,6 +51,7 @@ class Model:
         self.epochs = epochs
         self.validation_steps = validation_steps
 
+        # TODO 引入不同 optimizer (透過 config.yaml 判斷要用什麼)
         self.optimizer = tf.keras.optimizers.Adam(
             learning_rate=self.learning_rate,
             beta_1=0.9,
@@ -75,7 +71,6 @@ class Model:
         # Batch Normalization
         x = tf.keras.layers.BatchNormalization(epsilon=1e-5, momentum=0.9)(input_x)
 
-        # x = tf.keras.layers.Reshape((16, 1, 29))(x)  # (None, 16, 1, 29) # TODO remove
         x = tf.reshape(x, (-1, 16, 1, 29))  # (None, 16, 1, 29)
 
         # 第一次　Identity concat　加上　subject_id_ont_hot
@@ -91,44 +86,16 @@ class Model:
         factor = 1.0  # TODO
 
         # 第一層: conv2d (None, 8, 1, 32)
-        conv1 = tf.keras.layers.Conv2D(
-            filters=int(32 * factor),
-            kernel_size=(3, 1),
-            strides=(2, 1),
-            padding="same",
-            activation="relu",
-            name="conv1",
-        )(x)
+        conv1 = build_conv_layer(name="conv1", x=x, filters=int(32 * factor))
 
         # 第二層: conv2d (None, 4, 1, 32)
-        conv2 = tf.keras.layers.Conv2D(
-            filters=int(32 * factor),
-            kernel_size=(3, 1),
-            strides=(2, 1),
-            padding="same",
-            activation="relu",
-            name="conv2",
-        )(conv1)
+        conv2 = build_conv_layer(name="conv2", x=conv1, filters=int(32 * factor))
 
         # 第三層: conv2d (None, 2, 1, 64)
-        conv3 = tf.keras.layers.Conv2D(
-            filters=int(64 * factor),
-            kernel_size=(3, 1),
-            strides=(2, 1),
-            padding="same",
-            activation="relu",
-            name="conv3",
-        )(conv2)
+        conv3 = build_conv_layer(name="conv3", x=conv2, filters=int(64 * factor))
 
         # 第四層: conv2d (None, 1, 1, 64)
-        conv4 = tf.keras.layers.Conv2D(
-            filters=int(64 * factor),
-            kernel_size=(3, 1),
-            strides=(2, 1),
-            padding="same",
-            activation="relu",
-            name="conv4",
-        )(conv3)
+        conv4 = build_conv_layer(name="conv4", x=conv3, filters=int(64 * factor))
 
         x = tf.keras.layers.Flatten()(conv4)
 
@@ -143,37 +110,13 @@ class Model:
 
         return tf.keras.Model(inputs=[input_c, input_x], outputs=[y])
 
-    # TODO 可能改成一個 epoch 只能跑完每個 batch 就不能重複了?
-    def data_generator(self, batcher: Batcher):
-        while True:
-            batch_subject_id, batch_template_pcd, batch_pcd, batch_audio = batcher.get_next()
-            yield (batch_subject_id, batch_audio), np.concatenate(
-                (np.expand_dims(batch_template_pcd, axis=-1), batch_pcd), axis=-1
-            )
-
-    def create_dataset(self, generator):
-        return tf.data.Dataset.from_generator(
-            generator,
-            output_signature=(
-                (
-                    tf.TensorSpec(shape=(None,), dtype=tf.float32),  # subject id
-                    tf.TensorSpec(shape=(None, 16, 29, 2), dtype=tf.float32),  # audio (DeepSpeech)
-                ),
-                tf.TensorSpec(shape=(None, 5023, 3, 3), dtype=tf.float32),  # template pcd & ground truth pcd
-            ),
-        )
-
     def position_loss(self, true_pcd, pred_pcd):
-        return compute_pcd_squared_difference(true_pcd, pred_pcd)
+        return compute_pcd_sse(true_pcd, pred_pcd)
 
     def velocity_loss(self, true_pcd_prev, pred_pcd_prev, true_pcd_curr, pred_pcd_curr):
-        return compute_pcd_squared_difference(true_pcd_curr - true_pcd_prev, pred_pcd_curr - pred_pcd_prev)
+        return compute_pcd_sse(true_pcd_curr - true_pcd_prev, pred_pcd_curr - pred_pcd_prev)
 
     def train(self):
-
-        # TODO remove
-        # train_dataset = self.create_dataset(lambda: self.data_generator(self.train_batcher))
-        # val_dataset = self.create_dataset(lambda: self.data_generator(self.val_batcher))
 
         train_loss_metric = tf.keras.metrics.Mean(name="train_loss")
         val_loss_metric = tf.keras.metrics.Mean(name="val_loss")
@@ -196,7 +139,7 @@ class Model:
                 audio_curr = audio[..., 1]
 
                 with tf.GradientTape() as tape:
-                    # TODO 是否要 training=True?
+                    # TODO 是否要 training=True? (目前看起來不用, 有時間開起來看有沒有什麼問題)
                     pred_pcd_prev = template_pcd + self.model([subject_id, audio_prev], training=False)
                     pred_pcd_curr = template_pcd + self.model([subject_id, audio_curr], training=True)
 
@@ -236,11 +179,8 @@ class Model:
             train_loss_metric.reset_states()
             val_loss_metric.reset_states()
 
+    # TODO
     def eval(self):
-        # TODO
-        # test_dataset = self.create_dataset(lambda: self.data_generator(self.test_batcher))
-        # test_loss = self.model.evaluate(test_dataset, steps=self.test_batcher.get_num_batches())
-        # print("Test Loss:", test_loss)
         pass
 
     def save(self, dir_path: str = "models/"):

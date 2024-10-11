@@ -1,4 +1,3 @@
-# TODO 加上音訊
 # TODO 使用 keras progress bar
 # TODO 加上從中間開始指定 mesh 輸出影片
 

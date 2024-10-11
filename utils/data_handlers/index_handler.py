@@ -6,23 +6,10 @@ import logging
 
 class IndexHandler:
 
-    def __init__(self):
-        self.max_window_size = 5  # TODO
-        self.indices_by_subject_and_sequence = pickle.load(open("data/subj_seq_to_idx.pkl", "rb"))
+    def __init__(self, filepath: str, max_window_size: int = 5):
+        self.max_window_size = max_window_size
+        self.indices_by_subject_and_sequence = pickle.load(open(filepath, "rb"))
         self.generate_indix_windows()
-
-    # TODO: deprecated??
-    def get_indices_by_subject_and_sequence(self, subject_name: str, sequence_name: str):
-        # indices = [(frame_index, mesh_index), ...]
-
-        if subject_name not in self.indices_by_subject_and_sequence:
-            logging.warning(f"Index 資料不存在 Subject = {subject_name}, Sequence = *")
-            return []
-        if sequence_name not in self.indices_by_subject_and_sequence[subject_name]:
-            logging.debug(f"Index 資料不存在 Subject = {subject_name}, Sequence = {sequence_name}")
-            return []
-
-        return self.indices_by_subject_and_sequence[subject_name][sequence_name]
 
     def get_index_windws(self):
         return self.index_windows

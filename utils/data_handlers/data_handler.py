@@ -8,15 +8,22 @@ from .pcd_handler import PointCloudHandler
 
 
 class DataHandler:
-    def __init__(self):
+    def __init__(
+        self,
+        audio_raw_path,
+        audio_processed_path,
+        pcd_data_path,
+        pcd_template_path,
+        pcd_index_path,
+    ):
 
-        self.audio_data_handler = AudioHandler()
-        self.pcd_data_handler = PointCloudHandler()
-        self.index_data_handler = IndexHandler()
-
+        self.audio_data_handler = AudioHandler(raw_path=audio_raw_path, processed_path=audio_processed_path)
+        self.pcd_data_handler = PointCloudHandler(data_path=pcd_data_path, template_path=pcd_template_path)
+        self.index_data_handler = IndexHandler(filepath=pcd_index_path)
         self.audio_processed_data = self.audio_data_handler.get_processed_training_data()
+        self.prepare_data()
 
-        # TODO 拆成 method
+    def prepare_data(self):
         self.data = {}
         for (
             subject_name,
@@ -84,10 +91,3 @@ class DataHandler:
             np.transpose(np.array(batch_pcd), (0, 2, 3, 1)),
             np.transpose(np.array(batch_audio), (0, 2, 3, 1)),
         )
-
-    # TODO: deprecated?
-    def get_pcds_by_subject_and_sequence(self, subject_name: str, sequence_name: str):
-        indices = self.index_data_handler.get_indices_by_subject_and_sequence(
-            subject_name=subject_name, sequence_name=sequence_name
-        )
-        return [self.pcd_data_handler.get_pcd_by_index(pcd_index) for frame_index, pcd_index in indices.items()]

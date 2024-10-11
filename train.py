@@ -23,32 +23,40 @@ def main():
     data_config = get_data_config(config)
     training_config = get_training_config(config)
 
+    data_handler = DataHandler(
+        audio_raw_path=data_config["path"]["audio"]["raw"],
+        audio_processed_path=data_config["path"]["audio"]["processed"],
+        pcd_data_path=data_config["path"]["pcd"]["data"],
+        pcd_index_path=data_config["path"]["pcd"]["index"],
+        pcd_template_path=data_config["path"]["pcd"]["template"],
+    )
+
     subject_names = data_config["subjects"]
     sequence_names = data_config["sequences"]
 
-    data_handler = DataHandler()
+    window_size = len(training_config["loss_weights"])
 
     train_batcher = Batcher(
         data_handler=data_handler,
         subject_names=subject_names["train"],
         sequence_names=sequence_names["train"],
-        batch_size=data_config["batch_size"],
-        window_size=2,
+        batch_size=training_config["batch_size"],
+        window_size=window_size,
     )
 
     val_batcher = Batcher(
         data_handler=data_handler,
         subject_names=subject_names["val"],
         sequence_names=sequence_names["val"],
-        batch_size=data_config["batch_size"],
-        window_size=2,
+        batch_size=training_config["batch_size"],
+        window_size=window_size,
     )
     test_batcher = Batcher(
         data_handler=data_handler,
         subject_names=subject_names["test"],
         sequence_names=sequence_names["test"],
-        batch_size=data_config["batch_size"],
-        window_size=2,
+        batch_size=training_config["batch_size"],
+        window_size=window_size,
     )
 
     model = Model(

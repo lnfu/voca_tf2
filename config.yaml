@@ -3,8 +3,15 @@ checkpoint_dir: "checkpoints/"
 output_dir: "outputs/"
 
 data:
-  batch_size: 64
-  shuffle: true # TODO
+  path:
+    audio:
+      raw: "data/raw_audio_fixed.pkl"
+      processed: "data/deepspeech.pkl"
+    pcd:
+      data: "data/data_verts.npy"
+      index: "data/subj_seq_to_idx.pkl"
+      template: "data/data_verts.npy"
+
   subjects:
     train:
       - FaceTalk_170728_03272_TA
@@ -20,7 +27,7 @@ data:
       - FaceTalk_170908_03277_TA
     test:
       - FaceTalk_170809_00138_TA
-      - FaceTalk_170731_00024_TA 
+      - FaceTalk_170731_00024_TA
   sequences:
     train:
       - sentence01
@@ -107,7 +114,11 @@ data:
       - sentence40
 
 training:
-  optimizer: "Adam" # TODO
+  batch_size: 64
+  loss_weights:
+    - 1
+    - 10 # velocity loss
+  optimizer: "Adam"
   learning_rate: 0.0001
   epochs: 50
   validation_steps: 100
