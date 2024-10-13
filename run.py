@@ -13,8 +13,8 @@ from scipy.io import wavfile
 from utils.config import load_config
 from utils.data_handlers.audio_handler import AudioHandler
 from utils.batcher import Batcher
-from utils.model import custom_loss
 from utils.mesh.mesh_processor import MeshProcessor
+from utils.inference import Inference
 
 logging.basicConfig(
     stream=sys.stdout,
@@ -36,41 +36,15 @@ def main():
 
     template: meshio.Mesh = meshio.read(filename="data/FLAME_sample.ply", file_format="ply")
 
-    sample_rate, audio = wavfile.read("data/sample.wav")
+    audio_handler = AudioHandler(raw_path="data/audio/sample.wav")
+    processed_audio = audio_handler.get_processed_data()["subject"]["sequence"]
 
-    audio_handler = AudioHandler()
-
-    processed_audio = audio_handler.batch_process(
-        raw_data={
-            "sample": {
-                "sample": {
-                    "sample_rate": sample_rate,
-                    "audio": audio,
-                }
-            }
-        }
-    )["sample"]["sample"]
+    inference = Inference(config["model_dir"])
+    delta_pcds = inference.predict_delta_pcds(0, processed_audio)
 
     num_frames = processed_audio.shape[0]
-
-    logging.info("正在載入 VOCA 模型...")
-    tf.keras.utils.get_custom_objects()["custom_loss"] = custom_loss
-    model = tf.keras.models.load_model(config["model_dir"])
-    logging.info("VOCA 模型成功載入!")
-
-    delta_pcds = model.predict(
-        [
-            np.repeat(0, num_frames, axis=0),
-            processed_audio,
-        ]
-    )
-
-    logging.info("預測完成, 開始寫入資料...")
-
     assert num_frames == delta_pcds.shape[0]  # TODO
-
     mesh_processor = MeshProcessor(delta_pcds=delta_pcds, template=template)
-
     mesh_processor.save_to_obj_files(dir_path=config["output_dir"])
     mesh_processor.render_to_video(dir_path=config["output_dir"])
 

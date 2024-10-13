@@ -16,11 +16,10 @@ class DataHandler:
         pcd_template_path,
         pcd_index_path,
     ):
-
         self.audio_data_handler = AudioHandler(raw_path=audio_raw_path, processed_path=audio_processed_path)
         self.pcd_data_handler = PointCloudHandler(data_path=pcd_data_path, template_path=pcd_template_path)
         self.index_data_handler = IndexHandler(filepath=pcd_index_path)
-        self.audio_processed_data = self.audio_data_handler.get_processed_training_data()
+        self.audio_processed_data = self.audio_data_handler.get_processed_data()
         self.prepare_data()
 
     def prepare_data(self):

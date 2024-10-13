@@ -9,6 +9,7 @@ import logging
 import meshio
 
 from .mesh_render import MeshRenderer
+from ..common import log_execution
 
 
 class MeshProcessor:
@@ -30,8 +31,8 @@ class MeshProcessor:
         centers = np.mean(pcds, axis=1)  # (?, 3)
         self.center = np.mean(centers, axis=0)  # (3, )
 
+    @log_execution
     def render_to_video(self, dir_path: str):
-
         mesh_renderer = MeshRenderer()
         progbar = tf.keras.utils.Progbar(self.num_frames)
         # save
@@ -49,15 +50,13 @@ class MeshProcessor:
             video_writer.write(image=image)
             progbar.update(i + 1)
         video_writer.release()
-        logging.info("影片處理完成!")
 
+    @log_execution
     def save_to_obj_files(self, dir_path: str):
         progbar = tf.keras.utils.Progbar(self.num_frames)
-
         for i, mesh in enumerate(self.meshes):
             mesh.write(os.path.join(dir_path, "meshes", "%05d.obj" % i), file_format="obj")
             progbar.update(i + 1)
-        logging.info("OBJ files 存檔完成!")
 
     @property
     def num_frames(self):

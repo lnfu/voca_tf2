@@ -2,6 +2,8 @@ import numpy as np
 
 import pickle
 
+from ..common import load_pickle
+
 
 class PointCloudHandler:
     def __init__(self, data_path, template_path):
@@ -9,7 +11,7 @@ class PointCloudHandler:
         self.load_pcds(data_path)
 
     def load_template_pcds(self, filepath: str):
-        self.template_pcds = pickle.load(open(filepath, "rb"), encoding="latin1")
+        self.template_pcds = load_pickle(filepath)
 
     def load_pcds(self, filepath: str):
         self.pcds = np.load(filepath, mmap_mode="r")  # (123341, 5023, 3)

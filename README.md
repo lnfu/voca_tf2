@@ -30,13 +30,14 @@ docker compose up run
 
 ### Python Packages
 
-- `resampy`
+- `resampy==0.4.3`
 - `python_speech_features`
-- `opencv-python`
-- `trimesh`
-- `pyrender`
-- `meshio`
+- `opencv-python==4.10.0.84`
+- `trimesh==4.4.9`
+- `pyrender==0.1.45`
+- `meshio==5.3.5`
 - `pyopengl==3.1.4`
+- `networkx==3.4.1`
 
 ### Ubuntu Packages
 

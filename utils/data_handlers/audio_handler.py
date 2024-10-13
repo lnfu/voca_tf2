@@ -6,14 +6,19 @@ import pickle
 import logging
 import resampy
 
+from scipy.io import wavfile
 from python_speech_features import mfcc
-from common import check_file_exists
+from ..common import check_file_exists, load_pickle, log_execution
 
 
 class AudioHandler:
-    def __init__(self, raw_path, processed_path):
+    def __init__(self, raw_path: str, processed_path: str = None):
         self.raw_path = raw_path
-        self.processed_path = processed_path
+        if processed_path is None:
+            base = os.path.splitext(raw_path)[0]
+            self.processed_path = f"{base}_processed.pkl"
+        else:
+            self.processed_path = processed_path
 
         # TODO 寫進 config.yaml
         self.num_features = 29
@@ -37,26 +42,38 @@ class AudioHandler:
             output_features[:, feat] = np.interp(output_timestamps, input_timestamps, input[:, feat])
         return output_features
 
-    def get_processed_training_data(self):
+    def get_processed_data(self):
         if os.path.exists(self.processed_path):
             logging.info(f"使用已處理過的音訊 {self.processed_path}")
-            return pickle.load(open(self.processed_path, "rb"), encoding="latin1")
+            return load_pickle(self.processed_path)
 
         logging.info(f"音訊尚未處理")
 
         check_file_exists(self.raw_path)
-        raw_data = pickle.load(open(self.raw_path, "rb"), encoding="latin1")
+
+        ext = os.path.splitext(self.raw_path)[1].lower()
+        if ext == ".wav":
+            sample_rate, audio = wavfile.read(self.raw_path)
+            raw_data = {
+                "subject": {
+                    "sequence": {
+                        "sample_rate": sample_rate,
+                        "audio": audio,
+                    }
+                }
+            }
+        elif ext == ".pkl":
+            raw_data = load_pickle(self.raw_path)
+        else:
+            raise ValueError(f"不支援的音檔類型: {ext}")
 
         processed_data = self.batch_process(raw_data)
         pickle.dump(processed_data, open(self.processed_path, "wb"))  # save processed_data
 
         return processed_data
 
-    # TODO refactor (封裝)
-    def batch_process(self, raw_data):
-
-        logging.info(f"開始處理音訊")
-
+    @log_execution
+    def batch_process(self, raw_data):  # TODO refactor (封裝)
         # 先載入 deepspeech 模型 (好像是 6 層)
         # 輸入是 MFCC
         # 輸出是 (16, 29)
@@ -156,5 +173,4 @@ class AudioHandler:
 
                 processed_data[subject_name] = processed_subject_data
 
-        logging.info("音訊處理完成")
         return processed_data

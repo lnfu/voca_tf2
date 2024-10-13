@@ -5,12 +5,12 @@ output_dir: "outputs/"
 data:
   path:
     audio:
-      raw: "data/raw_audio_fixed.pkl"
-      processed: "data/deepspeech.pkl"
+      raw: "data/audio/raw_audio_fixed.pkl"
+      processed: "data/audio/deepspeech.pkl"
     pcd:
       data: "data/data_verts.npy"
       index: "data/subj_seq_to_idx.pkl"
-      template: "data/data_verts.npy"
+      template: "data/templates.pkl"
 
   subjects:
     train:

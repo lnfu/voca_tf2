@@ -66,6 +66,7 @@ def main():
         learning_rate=training_config["learning_rate"],
         epochs=training_config["epochs"],
         validation_steps=training_config["validation_steps"],
+        optimizer=training_config["optimizer"]
     )
 
     model.train()

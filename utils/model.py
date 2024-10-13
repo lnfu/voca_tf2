@@ -1,9 +1,11 @@
 import numpy as np
 import tensorflow as tf
 
+import time
 import logging
 
 from .batcher import Batcher
+from .common import log_execution
 
 
 def compute_pcd_sse(x, y):
@@ -42,23 +44,43 @@ class Model:
         learning_rate: float,
         epochs: int,
         validation_steps: int,
+        optimizer: str = "Adam",
+        beta_1: float = 0.9,
+        reset: bool = False,
+        checkpoint_dir: str = "checkpoints/",  # TODO config.yaml
     ):
+        # batcher
         self.train_batcher = train_batcher
         self.val_batcher = val_batcher
         self.test_batcher = test_batcher
 
+        # training parameters
         self.learning_rate = learning_rate
         self.epochs = epochs
         self.validation_steps = validation_steps
 
-        # TODO 引入不同 optimizer (透過 config.yaml 判斷要用什麼)
-        self.optimizer = tf.keras.optimizers.Adam(
-            learning_rate=self.learning_rate,
-            beta_1=0.9,
-        )
+        # optimizer
+        if optimizer.lower() == "adam":
+            self.optimizer = tf.keras.optimizers.Adam(
+                learning_rate=self.learning_rate,
+                beta_1=beta_1,
+            )
+        else:
+            raise ValueError(f"不支援的 Optimizer: {optimizer}")
 
+        # model
         self.model = self.build_model()
         self.model.summary()
+
+        # checkpoint
+        self.checkpoint_dir = checkpoint_dir
+        self.checkpoint = tf.train.Checkpoint(optimizer=self.optimizer, model=self.model)
+        self.checkpoint_manager = tf.train.CheckpointManager(self.checkpoint, self.checkpoint_dir, max_to_keep=3)
+        if not reset and self.checkpoint_manager.latest_checkpoint:
+            logging.info(f"Restoring from checkpoint: {self.checkpoint_manager.latest_checkpoint}")
+            self.checkpoint.restore(self.checkpoint_manager.latest_checkpoint)
+        elif reset:
+            logging.info("Starting fresh training, ignoring checkpoints")
 
     def build_model(self) -> tf.keras.Model:
         subject_id_ont_hot_shape = (None,)
@@ -116,6 +138,7 @@ class Model:
     def velocity_loss(self, true_pcd_prev, pred_pcd_prev, true_pcd_curr, pred_pcd_curr):
         return compute_pcd_sse(true_pcd_curr - true_pcd_prev, pred_pcd_curr - pred_pcd_prev)
 
+    @log_execution
     def train(self):
 
         train_loss_metric = tf.keras.metrics.Mean(name="train_loss")
@@ -125,7 +148,7 @@ class Model:
         val_steps = 100  # self.train_batcher.get_num_batches()
 
         for epoch in range(self.epochs):
-            print(f"Epoch {epoch+1}/{self.epochs}")
+            logging.info(f"Epoch {epoch+1}/{self.epochs}")
             train_progbar = tf.keras.utils.Progbar(target=train_steps)
             val_progbar = tf.keras.utils.Progbar(target=val_steps)
 
@@ -173,15 +196,19 @@ class Model:
                 val_loss_metric.update_state(val_loss)
                 val_progbar.update(step + 1, values=[("loss", train_loss_metric.result())])
 
-            print(f"平均 SSE (train): {train_loss_metric.result()}")
-            print(f"平均 SSE (val): {val_loss_metric.result()}")
-            print()
+            logging.info(f"平均 SSE (train): {train_loss_metric.result()}")
+            logging.info(f"平均 SSE (val): {val_loss_metric.result()}")
+            logging.info("")
             train_loss_metric.reset_states()
             val_loss_metric.reset_states()
+
+            # 每 10 個 epoch 儲存一次 checkpoint
+            if (epoch + 1) % 10 == 0:
+                self.checkpoint_manager.save()
+
+    def save(self, dir_path: str = "models/"):
+        self.model.save(dir_path, overwrite=False)
 
     # TODO
     def eval(self):
         pass
-
-    def save(self, dir_path: str = "models/"):
-        self.model.save(dir_path, overwrite=False)

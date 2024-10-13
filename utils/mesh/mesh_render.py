@@ -58,7 +58,6 @@ class MeshRenderer:
         # trimesh 上色 (沒有色彩)
         triangles = np.vstack([cell.data for cell in mesh_copy.cells if cell.type == "triangle"])
 
-        print(len(triangles))
         tri_mesh = trimesh.Trimesh(vertices=mesh_copy.points, faces=triangles, vertex_colors=None)
 
         # pyrender mesh
