@@ -16,7 +16,8 @@ services:
     tty: true
     command: >
       bash -c "
-        pip install resampy python_speech_features &&
+        pip install resampy==0.4.3 &&
+        pip install python-speech-features==0.6 &&
         python train.py
       "
 
@@ -41,7 +42,14 @@ services:
       bash -c "
         apt update -y &&
         apt install -y libosmesa6 ffmpeg &&
-        pip install resampy python_speech_features opencv-python trimesh pyrender meshio pyopengl==3.1.4 &&
+        pip install resampy==0.4.3 &&
+        pip install python-speech-features==0.6 &&
+        pip install opencv-python==4.10.0.84 &&
+        pip install trimesh==4.4.9 &&
+        pip install pyrender==0.1.45 &&
+        pip install meshio==5.3.5 &&
+        pip install pyopengl==3.1.4 &&
+        pip install networkx==3.4.1 &&
         python run.py
       "
 
@@ -65,6 +73,13 @@ services:
       bash -c "
         apt update -y &&
         apt install -y libosmesa6 ffmpeg &&
-        pip install resampy python_speech_features opencv-python trimesh pyrender meshio pyopengl==3.1.4 &&
+        pip install resampy==0.4.3 &&
+        pip install python-speech-features==0.6 &&
+        pip install opencv-python==4.10.0.84 &&
+        pip install trimesh==4.4.9 &&
+        pip install pyrender==0.1.45 &&
+        pip install meshio==5.3.5 &&
+        pip install pyopengl==3.1.4 &&
+        pip install networkx==3.4.1 &&
         tail -f /dev/null
       "

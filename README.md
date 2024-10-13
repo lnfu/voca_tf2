@@ -12,8 +12,8 @@ docker compose up train
 
 ### Python Packages
 
-- `resampy`
-- `python_speech_features`
+- `resampy==0.4.3`
+- `python-speech-features==0.6`
 
 ### Ubuntu Packages
 
@@ -31,7 +31,7 @@ docker compose up run
 ### Python Packages
 
 - `resampy==0.4.3`
-- `python_speech_features`
+- `python-speech-features==0.6`
 - `opencv-python==4.10.0.84`
 - `trimesh==4.4.9`
 - `pyrender==0.1.45`
