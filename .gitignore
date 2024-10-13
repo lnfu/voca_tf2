@@ -76,3 +76,5 @@ data/*
 models
 # outputs
 outputs
+# checkpoints
+checkpoints

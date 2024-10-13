@@ -202,8 +202,9 @@ class Model:
             train_loss_metric.reset_states()
             val_loss_metric.reset_states()
 
-            # 每 10 個 epoch 儲存一次 checkpoint
-            if (epoch + 1) % 10 == 0:
+            # 每 5 個 epoch 儲存一次 checkpoint
+            # TODO 寫成參數
+            if (epoch + 1) % 5 == 0:
                 self.checkpoint_manager.save()
 
     def save(self, dir_path: str = "models/"):
