@@ -78,3 +78,5 @@ models
 outputs
 # checkpoints
 checkpoints
+# logs
+logs

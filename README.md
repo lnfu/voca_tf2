@@ -79,3 +79,4 @@ pyopengl 必須安裝 3.1.4
 - [ ] 撰寫 Docker Compose file
 - [ ] 自己寫簡單版本的 psbody.mesh (只需要簡單的建立、儲存功能即可)
 - [ ] function type hint (單層的全部補上)
+- [ ] FLAME VOCA model 套件加上 `chumpy==0.70`

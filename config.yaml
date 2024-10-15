@@ -15,19 +15,10 @@ data:
   subjects:
     train:
       - FaceTalk_170728_03272_TA
-      - FaceTalk_170904_00128_TA
-      - FaceTalk_170725_00137_TA
-      - FaceTalk_170915_00223_TA
-      - FaceTalk_170811_03274_TA
-      - FaceTalk_170913_03279_TA
-      - FaceTalk_170904_03276_TA
-      - FaceTalk_170912_03278_TA
     val:
-      - FaceTalk_170811_03275_TA
-      - FaceTalk_170908_03277_TA
+      - FaceTalk_170728_03272_TA
     test:
-      - FaceTalk_170809_00138_TA
-      - FaceTalk_170731_00024_TA
+      - FaceTalk_170728_03272_TA
   sequences:
     train:
       - sentence01
@@ -62,52 +53,12 @@ data:
       - sentence30
       - sentence31
       - sentence32
-      - sentence33
-      - sentence34
-      - sentence35
-      - sentence36
-      - sentence37
-      - sentence38
-      - sentence39
-      - sentence40
     val:
-      - sentence21
-      - sentence22
-      - sentence23
-      - sentence24
-      - sentence25
-      - sentence26
-      - sentence27
-      - sentence28
-      - sentence29
-      - sentence30
-      - sentence31
-      - sentence32
       - sentence33
       - sentence34
       - sentence35
       - sentence36
-      - sentence37
-      - sentence38
-      - sentence39
-      - sentence40
     test:
-      - sentence21
-      - sentence22
-      - sentence23
-      - sentence24
-      - sentence25
-      - sentence26
-      - sentence27
-      - sentence28
-      - sentence29
-      - sentence30
-      - sentence31
-      - sentence32
-      - sentence33
-      - sentence34
-      - sentence35
-      - sentence36
       - sentence37
       - sentence38
       - sentence39
@@ -121,4 +72,4 @@ training:
   optimizer: "Adam"
   learning_rate: 0.0001
   epochs: 50
-  validation_steps: 100
+  validation_freq: 10

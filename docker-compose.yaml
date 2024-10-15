@@ -81,5 +81,6 @@ services:
         pip install meshio==5.3.5 &&
         pip install pyopengl==3.1.4 &&
         pip install networkx==3.4.1 &&
+        pip install chumpy==0.70 &&
         tail -f /dev/null
       "

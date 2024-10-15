@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
+import os
 import time
 import logging
 
@@ -35,7 +36,7 @@ def build_conv_layer(
 
 
 # TODO 用 dataclass decorator 簡化 constructor
-class Model:
+class VocaModel:
     def __init__(
         self,
         train_batcher: Batcher,
@@ -43,7 +44,7 @@ class Model:
         test_batcher: Batcher,
         learning_rate: float,
         epochs: int,
-        validation_steps: int,
+        validation_freq: int,
         optimizer: str = "Adam",
         beta_1: float = 0.9,
         reset: bool = False,
@@ -57,7 +58,7 @@ class Model:
         # training parameters
         self.learning_rate = learning_rate
         self.epochs = epochs
-        self.validation_steps = validation_steps
+        self.validation_freq = validation_freq
 
         # optimizer
         if optimizer.lower() == "adam":
@@ -138,74 +139,64 @@ class Model:
     def velocity_loss(self, true_pcd_prev, pred_pcd_prev, true_pcd_curr, pred_pcd_curr):
         return compute_pcd_sse(true_pcd_curr - true_pcd_prev, pred_pcd_curr - pred_pcd_prev)
 
+    def run_epoch(self, loss_metric, is_training=True):
+
+        batcher = self.train_batcher if is_training else self.val_batcher
+        steps = batcher.get_num_batches()
+        progbar = tf.keras.utils.Progbar(target=steps)
+
+        for step in range(steps):
+            subject_id, template_pcd, true_pcd, audio = batcher.get_next()
+
+            true_pcd_prev = true_pcd[..., 0]
+            true_pcd_curr = true_pcd[..., 1]
+            audio_prev = audio[..., 0]
+            audio_curr = audio[..., 1]
+
+            with tf.GradientTape() as tape:
+                # TODO 是否要 training=True? (目前看起來不用, 有時間開起來看有沒有什麼問題)
+                pred_pcd_prev = template_pcd + self.model([subject_id, audio_prev], training=False)
+                pred_pcd_curr = template_pcd + self.model([subject_id, audio_curr], training=is_training)
+
+                loss = self.position_loss(true_pcd_curr, pred_pcd_curr) + 10.0 * self.velocity_loss(
+                    true_pcd_prev, pred_pcd_prev, true_pcd_curr, pred_pcd_curr
+                )
+
+            gradients = tape.gradient(loss, self.model.trainable_variables)  # 計算梯度
+            self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))  # 更新權重
+
+            loss_metric.update_state(loss)
+            progbar.update(step + 1, values=[("loss", loss_metric.result())])
+
+        logging.info(f"平均 SSE ({'train' if is_training else 'val'}): {loss_metric.result()}")
+
     @log_execution
     def train(self):
+        logging.info(f"開始跑 {self.epochs} 個 epoch")
+
+        train_summary_writer = tf.summary.create_file_writer(os.path.join("logs/", "train"))
+        val_summary_writer = tf.summary.create_file_writer(os.path.join("logs/", "val"))
 
         train_loss_metric = tf.keras.metrics.Mean(name="train_loss")
         val_loss_metric = tf.keras.metrics.Mean(name="val_loss")
 
-        train_steps = self.train_batcher.get_num_batches()
-        val_steps = 100  # self.train_batcher.get_num_batches()
-
         for epoch in range(self.epochs):
             logging.info(f"Epoch {epoch+1}/{self.epochs}")
-            train_progbar = tf.keras.utils.Progbar(target=train_steps)
-            val_progbar = tf.keras.utils.Progbar(target=val_steps)
 
-            for step in range(train_steps):
-                subject_id, template_pcd, true_pcd, audio = self.train_batcher.get_next()
+            self.run_epoch(train_loss_metric, is_training=True)
+            with train_summary_writer.as_default():
+                tf.summary.scalar("loss", train_loss_metric.result(), step=epoch)
 
-                true_pcd_prev = true_pcd[..., 0]
-                true_pcd_curr = true_pcd[..., 1]
+            if (epoch + 1) % self.validation_freq == 0:
+                self.run_epoch(val_loss_metric, is_training=False)
+                with val_summary_writer.as_default():
+                    tf.summary.scalar("loss", val_loss_metric.result(), step=epoch)
 
-                audio_prev = audio[..., 0]
-                audio_curr = audio[..., 1]
-
-                with tf.GradientTape() as tape:
-                    # TODO 是否要 training=True? (目前看起來不用, 有時間開起來看有沒有什麼問題)
-                    pred_pcd_prev = template_pcd + self.model([subject_id, audio_prev], training=False)
-                    pred_pcd_curr = template_pcd + self.model([subject_id, audio_curr], training=True)
-
-                    loss = self.position_loss(true_pcd_curr, pred_pcd_curr) + 10.0 * self.velocity_loss(
-                        true_pcd_prev, pred_pcd_prev, true_pcd_curr, pred_pcd_curr
-                    )
-
-                gradients = tape.gradient(loss, self.model.trainable_variables)  # 計算梯度
-                self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))  # 更新權重
-
-                train_loss_metric.update_state(loss)
-                train_progbar.update(step + 1, values=[("loss", train_loss_metric.result())])
-
-            # Validation Loop
-            for step in range(val_steps):
-                subject_id, template_pcd, true_pcd, audio = self.train_batcher.get_next()
-
-                true_pcd_prev = true_pcd[..., 0]
-                true_pcd_curr = true_pcd[..., 1]
-
-                audio_prev = audio[..., 0]
-                audio_curr = audio[..., 1]
-
-                pred_pcd_prev = template_pcd + self.model([subject_id, audio_prev], training=False)
-                pred_pcd_curr = template_pcd + self.model([subject_id, audio_curr], training=False)
-
-                val_loss = self.position_loss(true_pcd_curr, pred_pcd_curr) + 10.0 * self.velocity_loss(
-                    true_pcd_prev, pred_pcd_prev, true_pcd_curr, pred_pcd_curr
-                )
-
-                val_loss_metric.update_state(val_loss)
-                val_progbar.update(step + 1, values=[("loss", train_loss_metric.result())])
-
-            logging.info(f"平均 SSE (train): {train_loss_metric.result()}")
-            logging.info(f"平均 SSE (val): {val_loss_metric.result()}")
-            logging.info("")
             train_loss_metric.reset_states()
             val_loss_metric.reset_states()
+            self.checkpoint_manager.save()
 
-            # 每 5 個 epoch 儲存一次 checkpoint
-            # TODO 寫成參數
-            if (epoch + 1) % 5 == 0:
-                self.checkpoint_manager.save()
+            logging.info("")
 
     def save(self, dir_path: str = "models/"):
         self.model.save(dir_path, overwrite=False)

@@ -10,7 +10,7 @@ import meshio
 
 from scipy.io import wavfile
 
-from utils.config import load_config_from_file
+from utils.config import load_config
 from utils.data_handlers.audio_handler import AudioHandler
 from utils.batcher import Batcher
 from utils.mesh.mesh_processor import MeshProcessor
@@ -32,21 +32,28 @@ logging.basicConfig(
 
 
 def main():
-    config = load_config_from_file("config.yaml")
-
-    template: meshio.Mesh = meshio.read(filename="data/FLAME_sample.ply", file_format="ply")
+    config = load_config("config.yaml")
 
     audio_handler = AudioHandler(raw_path="data/audio/sample.wav")
     processed_audio = audio_handler.get_processed_data()["subject"]["sequence"]
 
-    inference = Inference(config["model_dir"])
-    delta_pcds = inference.predict_delta_pcds(0, processed_audio)
+    logging.info("正在載入 VOCA 模型...")
+    model = tf.keras.models.load_model(config["model_dir"])
+    logging.info("VOCA 模型成功載入!")
 
-    num_frames = processed_audio.shape[0]
-    assert num_frames == delta_pcds.shape[0]  # TODO
-    mesh_processor = MeshProcessor(delta_pcds=delta_pcds, template=template)
-    mesh_processor.save_to_obj_files(dir_path=config["output_dir"])
-    mesh_processor.render_to_video(dir_path=config["output_dir"])
+    flame_params = model.predict(
+        [
+            processed_audio,
+        ]
+    )
+
+    np.save('shape.npy', model.trainable_variables[-1])
+
+    print("done")
+    # print(model.trainable_variables[-1])
+    # print(flame_params[:, :300])
+    # np.savetxt("flame_params.txt", flame_params, fmt="%.6f")
+    # np.savetxt("trainable.txt", model.trainable_variables[-1], fmt="%.6f")
 
 
 if __name__ == "__main__":
