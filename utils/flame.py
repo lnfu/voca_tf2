@@ -1,31 +1,47 @@
 import numpy as np
-import chumpy as ch
 import tensorflow as tf
 
 import pickle
 import logging
 
-model_path = "./data/generic_model.pkl"
+from .common import load_pickle
+
+model_path = "./data/flame2023.pkl"
 
 
 def rotation_vector_to_matrix(vec):
     theta = tf.norm(vec)
-    n = vec / theta
 
-    R1 = tf.cos(theta) * tf.eye(3)
-    R2 = tf.einsum("i,j->ij", n, n) * (1 - tf.cos(theta))
-    R3 = tf.convert_to_tensor([[0, -n[2], n[1]], [n[2], 0, -n[0]], [-n[1], n[0], 0]], dtype=tf.float32) * tf.sin(theta)
+    epsilon = 1e-6
 
-    return R1 + R2 + R3
+    def compute_rotation_matrix():
+        n = vec / theta
+
+        R1 = tf.cos(theta) * tf.eye(3)
+        R2 = tf.einsum("i,j->ij", n, n) * (1 - tf.cos(theta))
+        R3 = tf.convert_to_tensor(
+            [[0, -n[2], n[1]], [n[2], 0, -n[0]], [-n[1], n[0], 0]], dtype=tf.float32
+        ) * tf.sin(theta)
+        return R1 + R2 + R3
+
+    return tf.cond(
+        tf.abs(theta) < epsilon,
+        lambda: tf.eye(3, dtype=tf.float32),
+        compute_rotation_matrix,
+    )
 
 
 class Flame:
     @classmethod
     def load(clazz):
-        model = pickle.load(open(model_path, "rb"), encoding="latin1")
+        model = load_pickle(model_path)
 
-        clazz.v_template = tf.convert_to_tensor(model["v_template"], dtype=tf.float32)  # (5023, 3)
-        clazz.shapedirs = tf.convert_to_tensor(model["shapedirs"], dtype=tf.float32)  # (5023, 3, 400)
+        clazz.v_template = tf.convert_to_tensor(
+            model["v_template"], dtype=tf.float32
+        )  # (5023, 3)
+        clazz.shapedirs = tf.convert_to_tensor(
+            model["shapedirs"], dtype=tf.float32
+        )  # (5023, 3, 400)
 
         J_regressor_coo = model["J_regressor"].tocoo()
         clazz.J_regressor = tf.SparseTensor(
@@ -33,7 +49,9 @@ class Flame:
             values=tf.convert_to_tensor(J_regressor_coo.data, dtype=tf.float32),
             dense_shape=J_regressor_coo.shape,
         )  # (5, 5023)
-        clazz.posedirs = tf.convert_to_tensor(model["posedirs"], dtype=tf.float32)  # (5023, 3, 36)
+        clazz.posedirs = tf.convert_to_tensor(
+            model["posedirs"], dtype=tf.float32
+        )  # (5023, 3, 36)
 
         kintree_table = model["kintree_table"]
         clazz.parent = {}
@@ -54,46 +72,77 @@ class Flame:
 
         # pose = (15,)
         # betas = (400,) -> shape + expression
-        v_shaped = tf.reduce_sum(clazz.shapedirs * betas) + clazz.v_template  # (5023, 3)
+        v_shaped = (
+            tf.einsum("ijk,k->ij", clazz.shapedirs, betas) + clazz.v_template
+        )  # (5023, 3)
 
         J = tf.sparse.sparse_dense_matmul(clazz.J_regressor, v_shaped)  # (5, 3)
-
+        homo_zero_J = tf.concat([J, tf.zeros((5, 1))], axis=1)  # (5, 4)
         pose_1_to_4 = tf.reshape(pose[1 * 3 :], (4, 3))  # 拿掉第一個 (global rotation)
-        lrotmin = tf.reshape(tf.map_fn(lambda x: rotation_vector_to_matrix(x), pose_1_to_4), (4 * 3 * 3,))  # (36,)
 
-        v_posed = v_shaped + tf.reduce_sum(clazz.posedirs * lrotmin)  # (5023, 3)
-        homo_v_posed = tf.concat([v_posed, tf.ones((5023, 1))], axis=1)  # (5023, 4)
+        lrotmin = tf.reshape(
+            tf.map_fn(lambda x: rotation_vector_to_matrix(x) - tf.eye(3), pose_1_to_4),
+            (4 * 3 * 3,),
+        )  # (36,)
+
+        v_posed = (
+            tf.einsum("ijk,k->ij", clazz.posedirs, lrotmin) + v_shaped
+        )  # (5023, 3)
+        # v_posed = v_shaped + tf.reduce_sum(clazz.posedirs * lrotmin)  # (5023, 3)
+        homo_one_v_posed = tf.concat([v_posed, tf.ones((5023, 1))], axis=1)  # (5023, 4)
 
         poses = [pose[i * 3 : (i + 1) * 3] for i in range(len(pose) // 3)]
 
         A = [None] * 5
         A[0] = tf.concat(
             [
-                tf.concat([rotation_vector_to_matrix(poses[0]), tf.reshape(J[0], (3, 1))], axis=1),
+                tf.concat(
+                    [rotation_vector_to_matrix(poses[0]), tf.reshape(J[0], (3, 1))],
+                    axis=1,
+                ),
                 tf.constant([[0.0, 0.0, 0.0, 1.0]]),
             ],
             axis=0,
         )
+
         for i in range(1, 5):
             j = clazz.parent[i]
             A[i] = tf.matmul(
                 A[j],
                 tf.concat(
                     [
-                        tf.concat([rotation_vector_to_matrix(poses[i]), tf.reshape(J[i] - J[j], (3, 1))], axis=1),
-                        tf.constant([[0.0, 0.0, 0.0, 1.0]]),
+                        tf.concat(
+                            [
+                                rotation_vector_to_matrix(poses[i]),
+                                tf.reshape(J[i] - J[j], (3, 1)),
+                            ],
+                            axis=1,
+                        ),  # (4, 3)
+                        tf.constant([[0.0, 0.0, 0.0, 1.0]]),  # (4,)
                     ],
                     axis=0,
                 ),
-                transpose_b=True,
+                transpose_b=False,
             )
-        A = tf.stack(A, axis=-1)
-        T = tf.matmul(A, clazz.weights, transpose_b=True)  # (4, 4, 5023)
 
-        results = tf.matmul(
-            tf.transpose(T, (2, 0, 1)), tf.expand_dims(homo_v_posed, axis=2)
-        )  # (4, 4, 5023) * (5023, 4, 1) = (5023, 4, 1)
-        results = tf.squeeze(results, axis=-1)  # (5023, 4,)
+        B = [None] * 5
+
+        for i in range(5):
+            B[i] = A[i] - tf.concat(
+                [
+                    tf.zeros(shape=(4, 3), dtype=tf.float32),
+                    tf.reshape(tf.einsum("ij,j->i", A[i], homo_zero_J[i]), (4, 1)),
+                ],
+                axis=1,
+            )
+
+        B = tf.stack(B, axis=-1)
+
+        # (4, 4, 5) * (5023, 5) -> (4, 4, 5023)
+        T = tf.einsum("ijk,qk->ijq", B, clazz.weights)
+
+        # (4, 4, 5023) * (5023, 4) = (5023, 4)
+        results = tf.einsum("ijk,kj->ki", T, homo_one_v_posed)
 
         assert results.shape == (
             5023,

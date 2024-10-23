@@ -80,3 +80,5 @@ outputs
 checkpoints
 # logs
 logs
+# VSCode
+.vscode/
