@@ -39,7 +39,9 @@ class AudioHandler:
 
         output_features = np.zeros((output_length, num_features))
         for feat in range(num_features):
-            output_features[:, feat] = np.interp(output_timestamps, input_timestamps, input[:, feat])
+            output_features[:, feat] = np.interp(
+                output_timestamps, input_timestamps, input[:, feat]
+            )
         return output_features
 
     def get_processed_data(self):
@@ -68,7 +70,9 @@ class AudioHandler:
             raise ValueError(f"不支援的音檔類型: {ext}")
 
         processed_data = self.batch_process(raw_data)
-        pickle.dump(processed_data, open(self.processed_path, "wb"))  # save processed_data
+        pickle.dump(
+            processed_data, open(self.processed_path, "wb")
+        )  # save processed_data
 
         return processed_data
 
@@ -102,8 +106,12 @@ class AudioHandler:
                 for sequence_name, sequence_data in subject_data.items():
 
                     sample_rate = sequence_data["sample_rate"]  # 22000 = 22 kHz
-                    raw_audio = sequence_data["audio"]  # ndarray, shape=(?,), dtype=int16
-                    logging.info(f"當前處理音訊: Subject = {subject_name}, Sequence = {sequence_name}")
+                    raw_audio = sequence_data[
+                        "audio"
+                    ]  # ndarray, shape=(?,), dtype=int16
+                    logging.info(
+                        f"當前處理音訊: Subject = {subject_name}, Sequence = {sequence_name}"
+                    )
 
                     resampled_audio = resampy.resample(
                         raw_audio.astype(np.float32),
@@ -130,8 +138,6 @@ class AudioHandler:
                     zero_pad = np.zeros((9, 26), dtype=mfcc_features.dtype)
                     mfcc_features = np.concatenate((zero_pad, mfcc_features, zero_pad))
 
-                    # TODO 看不懂這邊, 之後有時間再研究
-                    # TODO 可能 deepspeech_input 改個名稱
                     deepspeech_input = np.lib.stride_tricks.as_strided(
                         mfcc_features,
                         (num, 2 * 9 + 1, 26),  # ?, 19, 26
@@ -146,7 +152,9 @@ class AudioHandler:
                     deepspeech_input = np.copy(
                         deepspeech_input
                     )  # 因為前面用 np.lib.stride_tricks.as_strided 只是回傳 view
-                    deepspeech_input = (deepspeech_input - np.mean(deepspeech_input)) / np.std(deepspeech_input)
+                    deepspeech_input = (
+                        deepspeech_input - np.mean(deepspeech_input)
+                    ) / np.std(deepspeech_input)
 
                     deepspeech_output = sess.run(
                         logits,
@@ -160,16 +168,28 @@ class AudioHandler:
                     duration = float(raw_audio.shape[0]) / sample_rate
                     # audio_len_s = float(audio_sample.shape[0]) / sample_rate
                     num_frames = int(round(duration * 60))
-                    deepspeech_output = self.resample(deepspeech_output[:, 0], 50, 60, output_length=num_frames)
+                    deepspeech_output = self.resample(
+                        deepspeech_output[:, 0], 50, 60, output_length=num_frames
+                    )
 
-                    zero_pad = np.zeros((int(self.window_size // 2), deepspeech_output.shape[1]))
-                    deepspeech_output = np.concatenate((zero_pad, deepspeech_output, zero_pad), axis=0)
+                    zero_pad = np.zeros(
+                        (int(self.window_size // 2), deepspeech_output.shape[1])
+                    )
+                    deepspeech_output = np.concatenate(
+                        (zero_pad, deepspeech_output, zero_pad), axis=0
+                    )
 
                     processed_sequence_data = []
-                    for idx in range(0, deepspeech_output.shape[0] - self.window_size, self.stride):
-                        processed_sequence_data.append(deepspeech_output[idx : idx + self.window_size])
+                    for idx in range(
+                        0, deepspeech_output.shape[0] - self.window_size, self.stride
+                    ):
+                        processed_sequence_data.append(
+                            deepspeech_output[idx : idx + self.window_size]
+                        )
 
-                    processed_subject_data[sequence_name] = np.array(processed_sequence_data)
+                    processed_subject_data[sequence_name] = np.array(
+                        processed_sequence_data
+                    )
 
                 processed_data[subject_name] = processed_subject_data
 

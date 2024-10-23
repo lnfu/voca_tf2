@@ -13,11 +13,13 @@ class Batcher:
     def get_num_subjects(self):
         return len(self.subject_names)
 
-    def get_subject_id_by_name(self, name: str):
+    def get_subject_id_by_name(self, name: str, default_value: int = None):
         try:
             return self.subject_names.index(name)
         except ValueError:
-            return np.random.randint(0, len(self.subject_names))  # TODO 之後也可以都用 0 試試看
+            if default_value is not None:
+                return default_value
+            return np.random.randint(0, len(self.subject_names))
 
     def __init__(
         self,
@@ -40,9 +42,14 @@ class Batcher:
         filtered = {
             subject_name: {
                 sequence_name: [
-                    window[: self.window_size]  # 每個 window 只取前 self.window_size 並且不能有 None
+                    window[
+                        : self.window_size
+                    ]  # 每個 window 只取前 self.window_size 並且不能有 None
                     for window in sequence_data
-                    if all(window_item is not None for window_item in window[: self.window_size])
+                    if all(
+                        window_item is not None
+                        for window_item in window[: self.window_size]
+                    )
                 ]
                 for sequence_name, sequence_data in subject_data.items()
                 if sequence_name in sequence_names
@@ -70,11 +77,15 @@ class Batcher:
             self.current_index : self.current_index + self.batch_size
         ]  # 這種寫法右界超過也沒關係
 
-        batch_subject_name, batch_template_pcd, batch_pcd, batch_audio = self.data_handler.unpack_data(
-            batch_data_index_only
+        batch_subject_name, batch_template_pcd, batch_pcd, batch_audio = (
+            self.data_handler.unpack_data(batch_data_index_only)
         )
 
-        batch_subject_id = [self.get_subject_id_by_name(subject_name) for subject_name in batch_subject_name]
+        batch_subject_id = [
+            self.get_subject_id_by_name(subject_name)  # random if not valid
+            # self.get_subject_id_by_name(subject_name, 0) # 0 if not valid
+            for subject_name in batch_subject_name
+        ]
 
         self.current_index += self.batch_size  # 更新 current_index
 

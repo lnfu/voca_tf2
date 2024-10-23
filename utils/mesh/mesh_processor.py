@@ -1,5 +1,3 @@
-# TODO 自訂儲存路徑
-
 import numpy as np
 import tensorflow as tf
 
@@ -13,7 +11,9 @@ from ..common import log_execution
 
 
 class MeshProcessor:
-    def __init__(self, pcds=None, delta_pcds=None, template: meshio.Mesh = None) -> None:
+    def __init__(
+        self, pcds=None, delta_pcds=None, template: meshio.Mesh = None
+    ) -> None:
 
         if pcds is not None:
             triangles = []
@@ -25,7 +25,9 @@ class MeshProcessor:
             faces = template.cells
             pcds = delta_pcds + template.points
         else:
-            raise ValueError("You must provide either 'pcds' or both 'delta_pcds' and 'template'.")
+            raise ValueError(
+                "You must provide either 'pcds' or both 'delta_pcds' and 'template'."
+            )
 
         self.meshes = [meshio.Mesh(points=pcd, cells=faces) for pcd in pcds]
         centers = np.mean(pcds, axis=1)  # (?, 3)
@@ -55,7 +57,9 @@ class MeshProcessor:
     def save_to_obj_files(self, dir_path: str):
         progbar = tf.keras.utils.Progbar(self.num_frames)
         for i, mesh in enumerate(self.meshes):
-            mesh.write(os.path.join(dir_path, "meshes", "%05d.obj" % i), file_format="obj")
+            mesh.write(
+                os.path.join(dir_path, "meshes", "%05d.obj" % i), file_format="obj"
+            )
             progbar.update(i + 1)
 
     @property
