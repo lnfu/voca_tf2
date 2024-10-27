@@ -15,6 +15,7 @@ from utils.data_handlers.audio_handler import AudioHandler
 from utils.batcher import Batcher
 from utils.mesh.mesh_processor import MeshProcessor
 from utils.inference import Inference
+from utils.flame import Flame
 
 logging.basicConfig(
     stream=sys.stdout,
@@ -34,26 +35,29 @@ logging.basicConfig(
 def main():
     config = load_config("config.yaml")
 
-    audio_handler = AudioHandler(raw_path="data/audio/sample.wav")
+    audio_handler = AudioHandler(raw_path="data/audio/sample_female_01.wav")
     processed_audio = audio_handler.get_processed_data()["subject"]["sequence"]
 
     logging.info("正在載入 VOCA 模型...")
     model = tf.keras.models.load_model(config["model_dir"])
     logging.info("VOCA 模型成功載入!")
+    np.save("shape.npy", model.trainable_variables[-1])
 
+    # prediction
     flame_params = model.predict(
         [
             processed_audio,
         ]
     )
 
-    np.save('shape.npy', model.trainable_variables[-1])
+    pred_pcds = tf.map_fn(lambda x: Flame.calculate_pcd_by_param(x), flame_params)
 
-    print("done")
-    # print(model.trainable_variables[-1])
-    # print(flame_params[:, :300])
-    # np.savetxt("flame_params.txt", flame_params, fmt="%.6f")
-    # np.savetxt("trainable.txt", model.trainable_variables[-1], fmt="%.6f")
+    num_frames = processed_audio.shape[0]
+    assert num_frames == flame_params.shape[0]  # TODO
+
+    mesh_processor = MeshProcessor(pcds=pred_pcds)
+    mesh_processor.save_to_obj_files(dir_path=config["output_dir"])
+    mesh_processor.render_to_video(dir_path=config["output_dir"])
 
 
 if __name__ == "__main__":

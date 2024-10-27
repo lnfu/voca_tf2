@@ -19,12 +19,7 @@ def load_config_from_file(config_file_path: str) -> dict:
 
 def load_config(config_file_path: str) -> dict:
     config = load_config_from_file(config_file_path)
-
-    flags = parse_cli_flags()
-    config["training"]["batch_size"] = flags.batch_size
-    config["training"]["learning_rate"] = flags.learning_rate
-    config["training"]["epochs"] = flags.epochs
-    config["training"]["validation_freq"] = flags.validation_freq
+    config = overwrite_config_from_cli(config)
     return config
 
 
@@ -36,12 +31,43 @@ def get_training_config(config: dict) -> dict:
     return config.get("training", {})
 
 
-def parse_cli_flags():
+def overwrite_config_from_cli(config: dict):
     parser = argparse.ArgumentParser(description="")
 
-    parser.add_argument("--learning_rate", type=float, default=0.001, help="Learning rate for training")
-    parser.add_argument("--batch_size", type=int, default=64, help="Batch size for training")
-    parser.add_argument("--epochs", type=int, default=10, help="Number of epochs for training")
-    parser.add_argument("--validation_freq", type=int, default=1, help="Frequency of validation during training")
+    parser.add_argument(
+        "--learning_rate",
+        type=float,
+        default=config["training"]["learning_rate"],
+        help="Learning rate for training",
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=config["training"]["batch_size"],
+        help="Batch size for training",
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=config["training"]["epochs"],
+        help="Number of epochs for training",
+    )
+    parser.add_argument(
+        "--validation_freq",
+        type=int,
+        default=config["training"]["validation_freq"],
+        help="Frequency of validation during training",
+    )
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    config["training"].update(
+        {
+            "learning_rate": args.learning_rate,
+            "batch_size": args.batch_size,
+            "epochs": args.epochs,
+            "validation_freq": args.validation_freq,
+        }
+    )
+
+    return config

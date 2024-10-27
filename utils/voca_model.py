@@ -75,6 +75,13 @@ class VocaModel:
         else:
             raise ValueError(f"不支援的 Optimizer: {optimizer}")
 
+        logging.info("Initialized Model with the following hyperparameters:")
+        logging.info(f"Learning Rate: {self.learning_rate}")
+        logging.info(f"Epochs: {self.epochs}")
+        logging.info(f"Validation Frequency: {self.validation_freq}")
+        logging.info(f"Factor: {self.factor}")
+        logging.info(f"Optimizer: {self.optimizer}")
+
         # model
         self.model = self.build_model()
         self.model.summary()

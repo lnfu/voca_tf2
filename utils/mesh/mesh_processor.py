@@ -17,9 +17,15 @@ class MeshProcessor:
 
         if pcds is not None:
             triangles = []
-            with open("data/triangles.txt", "r") as face_file:
-                for line in face_file:
-                    triangles.append(line.split(" "))
+            with open(
+                os.path.join(os.path.dirname(__file__), "triangles.txt"), "r"
+            ) as file:
+                for line in file:
+                    triangles.append(
+                        list(
+                            map(lambda x: int(x) - 1, line.split(" ")[1:])
+                        )  # 1-index (.obj format) -> 0-index (meshio)
+                    )
             faces = [("triangle", triangles)]
         elif delta_pcds is not None and template is not None:
             faces = template.cells
