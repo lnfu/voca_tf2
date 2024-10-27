@@ -8,3 +8,4 @@ mesh = (5023, 3)
 - `data_verts.npy`
 - `flame2023.pkl`: https://flame.is.tue.mpg.de/download.php
 - `output_graph.pb`: https://github.com/mozilla/DeepSpeech/releases/tag/v0.1.0
+- `FLAME_sample.ply`: https://github.com/TimoBolkart/voca/blob/master/template/FLAME_sample.ply

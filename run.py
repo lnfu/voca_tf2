@@ -10,7 +10,7 @@ import meshio
 
 from scipy.io import wavfile
 
-from utils.config import load_config_from_file
+from utils.config import load_config, get_data_config, get_training_config
 from utils.data_handlers.audio_handler import AudioHandler
 from utils.batcher import Batcher
 from utils.mesh.mesh_processor import MeshProcessor
@@ -32,7 +32,7 @@ logging.basicConfig(
 
 
 def main():
-    config = load_config_from_file("config.yaml")
+    config = load_config("config.yaml")
 
     template: meshio.Mesh = meshio.read(filename="data/FLAME_sample.ply", file_format="ply")
 

@@ -4,7 +4,7 @@ import tensorflow as tf
 import sys
 import logging
 
-from utils.config import load_config_from_file, get_data_config, get_training_config
+from utils.config import load_config, get_data_config, get_training_config
 
 from utils.data_handlers.data_handler import DataHandler
 from utils.batcher import Batcher
@@ -19,7 +19,7 @@ logging.basicConfig(
 
 
 def main():
-    config = load_config_from_file("config.yaml")
+    config = load_config("config.yaml")
     data_config = get_data_config(config)
     training_config = get_training_config(config)
 
