@@ -39,7 +39,6 @@ def build_conv_layer(
     )(x)
 
 
-# TODO 用 dataclass decorator 簡化 constructor
 class VocaModel:
     def __init__(
         self,
