@@ -4,9 +4,10 @@
 import numpy as np
 import tensorflow as tf
 
+import os
 import sys
-import logging
 import meshio
+import logging
 
 from scipy.io import wavfile
 
@@ -56,8 +57,8 @@ def main():
     assert num_frames == flame_params.shape[0]  # TODO
 
     mesh_processor = MeshProcessor(pcds=pred_pcds)
-    mesh_processor.save_to_obj_files(dir_path=config["output_dir"])
-    mesh_processor.render_to_video(dir_path=config["output_dir"])
+    # mesh_processor.save_to_obj_files(dir_path=config["output_dirs"]["mesh"])
+    mesh_processor.render_to_video(dir_path=config["output_dirs"]["video"])
 
 
 if __name__ == "__main__":

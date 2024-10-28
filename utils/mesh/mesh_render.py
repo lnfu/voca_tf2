@@ -5,6 +5,7 @@ import logging
 import trimesh
 import pyrender
 import meshio
+import copy
 
 
 class MeshRenderer:
@@ -50,15 +51,23 @@ class MeshRenderer:
         ]  # 往 z 平移一單位
         scene.add(light, pose=light_pose)
 
-        mesh_copy = meshio.Mesh(points=mesh.points, cells=mesh.cells)
+        points_copy = np.copy(mesh.points)
+        cells_copy = copy.deepcopy(mesh.cells)
+        mesh_copy = meshio.Mesh(points=points_copy, cells=cells_copy)
 
         # 圍繞 center 做旋轉 rotation
-        mesh_copy.points[:] = cv2.Rodrigues(rotation)[0].dot((mesh_copy.points - center).T).T + center
+        mesh_copy.points[:] = (
+            cv2.Rodrigues(rotation)[0].dot((mesh_copy.points - center).T).T + center
+        )
 
         # trimesh 上色 (沒有色彩)
-        triangles = np.vstack([cell.data for cell in mesh_copy.cells if cell.type == "triangle"])
+        triangles = np.vstack(
+            [cell.data for cell in mesh_copy.cells if cell.type == "triangle"]
+        )
 
-        tri_mesh = trimesh.Trimesh(vertices=mesh_copy.points, faces=triangles, vertex_colors=None)
+        tri_mesh = trimesh.Trimesh(
+            vertices=mesh_copy.points, faces=triangles, vertex_colors=None
+        )
 
         # pyrender mesh
         render_mesh = pyrender.Mesh.from_trimesh(tri_mesh, smooth=True)
@@ -69,9 +78,13 @@ class MeshRenderer:
                 viewport_width=frustum_params["width"],
                 viewport_height=frustum_params["height"],
             )
-            colors, _ = renderer.render(scene, flags=pyrender.RenderFlags.SKIP_CULL_FACES)
+            colors, _ = renderer.render(
+                scene, flags=pyrender.RenderFlags.SKIP_CULL_FACES
+            )
         except Exception as e:
             logging.error("pyrender: An error occurred while rendering: %s", e)
-            colors = np.zeros((frustum_params["height"], frustum_params["width"], 3), dtype="uint8")
+            colors = np.zeros(
+                (frustum_params["height"], frustum_params["width"], 3), dtype="uint8"
+            )
 
         return colors[..., ::-1]

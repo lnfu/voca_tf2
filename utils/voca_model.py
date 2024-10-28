@@ -8,7 +8,7 @@ import logging
 from .batcher import Batcher
 from .common import log_execution
 
-
+@tf.function
 def compute_pcd_sse(x, y):
     squared_difference_per_point = tf.math.squared_difference(x, y)  # (?, 5023, 3)
     squared_difference_sum_per_point = tf.math.reduce_sum(
@@ -153,9 +153,11 @@ class VocaModel:
 
         return tf.keras.Model(inputs=[input_c, input_x], outputs=[y])
 
+    @tf.function
     def position_loss(self, true_pcd, pred_pcd):
         return compute_pcd_sse(true_pcd, pred_pcd)
 
+    @tf.function
     def velocity_loss(self, true_pcd_prev, pred_pcd_prev, true_pcd_curr, pred_pcd_curr):
         return compute_pcd_sse(
             true_pcd_curr - true_pcd_prev, pred_pcd_curr - pred_pcd_prev

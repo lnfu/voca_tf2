@@ -7,7 +7,7 @@ import logging
 import meshio
 
 from .mesh_render import MeshRenderer
-from ..common import log_execution
+from ..common import log_execution, check_and_create_directory
 
 
 class MeshProcessor:
@@ -23,7 +23,7 @@ class MeshProcessor:
                 for line in file:
                     triangles.append(
                         list(
-                            map(lambda x: int(x) - 1, line.split(" ")[1:])
+                            map(lambda x: int(x) - 1, line.split(" "))
                         )  # 1-index (.obj format) -> 0-index (meshio)
                     )
             faces = [("triangle", triangles)]
@@ -61,11 +61,10 @@ class MeshProcessor:
 
     @log_execution
     def save_to_obj_files(self, dir_path: str):
+        check_and_create_directory(dir_path)
         progbar = tf.keras.utils.Progbar(self.num_frames)
         for i, mesh in enumerate(self.meshes):
-            mesh.write(
-                os.path.join(dir_path, "meshes", "%05d.obj" % i), file_format="obj"
-            )
+            mesh.write(os.path.join(dir_path, "%05d.obj" % i), file_format="obj")
             progbar.update(i + 1)
 
     @property
