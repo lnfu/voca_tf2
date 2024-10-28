@@ -7,11 +7,6 @@ services:
     volumes:
       - .:/workspace
     working_dir: /workspace
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: [gpu]
     stdin_open: true
     tty: true
     command: >
@@ -20,6 +15,17 @@ services:
         pip install python-speech-features==0.6 &&
         python train.py
       "
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    ipc: host
+    ulimits:
+      memlock: -1
+      stack: 67108864            
 
   run:
     image: nvcr.io/nvidia/tensorflow:23.07-tf2-py3 # or switch to 24.09-tf2-py3 if needed
@@ -31,11 +37,6 @@ services:
     volumes:
       - .:/workspace
     working_dir: /workspace
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: [gpu]
     stdin_open: true
     tty: true
     command: >
@@ -52,6 +53,17 @@ services:
         pip install networkx==3.4.1 &&
         python run.py
       "
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    ipc: host
+    ulimits:
+      memlock: -1
+      stack: 67108864            
 
   dev:
     image: nvcr.io/nvidia/tensorflow:23.07-tf2-py3 # or switch to 24.09-tf2-py3 if needed
@@ -62,11 +74,6 @@ services:
     volumes:
       - .:/workspace
     working_dir: /workspace
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: [gpu]
     stdin_open: true
     tty: true
     command: >
@@ -84,3 +91,14 @@ services:
         pip install chumpy==0.70 &&
         tail -f /dev/null
       "
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    ipc: host
+    ulimits:
+      memlock: -1
+      stack: 67108864            

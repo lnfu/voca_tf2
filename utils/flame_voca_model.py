@@ -38,13 +38,6 @@ class FlameVocaModel(VocaModel):
 
         input_x = tf.keras.Input(shape=deepspeech_feature_shape[1:], name="input_x")
 
-        # FLAME shape parameters
-        s = tf.Variable(
-            initial_value=tf.random.normal(shape=(300,), dtype=tf.float32),
-            trainable=True,
-            name="flame_shape_params",
-        )
-
         # TODO 是否需要 translation?
 
         # Batch Normalization
@@ -71,16 +64,6 @@ class FlameVocaModel(VocaModel):
         fc3 = tf.keras.layers.Dense(units=115, activation=None, name="fc3")(
             fc2
         )  # (?, 115) FLAME expression (100) + pose (15) parameters
-
-        # y = tf.concat(
-        #     [
-        #         tf.repeat(
-        #             tf.expand_dims(s, axis=0), repeats=tf.shape(fc3)[0], axis=0
-        #         ),  # (300,) -> (1, 300) -> (?, 300)
-        #         fc3,  # (?, 115)
-        #     ],
-        #     axis=1,
-        # )  # (?, 415)
 
         y = ConcatShapeLayer()(fc3)
 

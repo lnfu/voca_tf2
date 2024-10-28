@@ -1,6 +1,9 @@
 import numpy as np
 import tensorflow as tf
 
+from tensorflow.python.client import device_lib
+print(tf.config.list_physical_devices("GPU").__len__() > 0) # 是否有使用 GPU
+
 import sys
 import logging
 

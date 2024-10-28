@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 
 from utils.data_handlers.data_handler import DataHandler
 
@@ -90,10 +91,10 @@ class Batcher:
         self.current_index += self.batch_size  # 更新 current_index
 
         return (
-            np.array(batch_subject_id),  # (None, 64, 8)
-            batch_template_pcd,  # (None, 5023, 3)
-            batch_pcd,  # (None, 5023, 3, 2)
-            batch_audio,  # (None, 16, 29, 2)
+            tf.convert_to_tensor(np.array(batch_subject_id), dtype=tf.float32),  # (None, 64, 8)
+            tf.convert_to_tensor(batch_template_pcd, dtype=tf.float32),  # (None, 5023, 3)
+            tf.convert_to_tensor(batch_pcd, dtype=tf.float32),  # (None, 5023, 3, 2)
+            tf.convert_to_tensor(batch_audio, dtype=tf.float32),  # (None, 16, 29, 2)
         )
 
     def reset(self):

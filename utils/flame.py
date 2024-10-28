@@ -65,6 +65,7 @@ class Flame:
         logging.info(f"loaded FLAME model from: {model_path}")
 
     @classmethod
+    @tf.function
     def calculate_pcd_by_param(clazz, flame_params: tf.Tensor) -> tf.Tensor:
 
         betas = flame_params[:400]  # shape (300) + expression (100)
