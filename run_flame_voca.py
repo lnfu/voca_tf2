@@ -6,6 +6,7 @@ import tensorflow as tf
 
 import os
 import sys
+import time
 import meshio
 import logging
 
@@ -36,7 +37,7 @@ logging.basicConfig(
 def main():
     config = load_config("config.yaml")
 
-    audio_handler = AudioHandler(raw_path="data/audio/sample_female_01.wav")
+    audio_handler = AudioHandler(raw_path="data/audio/shakira.wav")
     processed_audio = audio_handler.get_processed_data()["subject"]["sequence"]
 
     logging.info("正在載入 VOCA 模型...")
@@ -51,13 +52,21 @@ def main():
         ]
     )
 
+    print(type(flame_params))
+    np.save("temp.npy", flame_params)
+    exit(0)
+
+    start_time = time.time()  # TODO
     pred_pcds = tf.map_fn(lambda x: Flame.calculate_pcd_by_param(x), flame_params)
+    end_time = time.time()  # TODO
+    # logging.info(f"Execution time: {end_time - start_time:.4f} seconds")  # TODO
+    # exit(0)
 
     num_frames = processed_audio.shape[0]
     assert num_frames == flame_params.shape[0]  # TODO
 
     mesh_processor = MeshProcessor(pcds=pred_pcds)
-    # mesh_processor.save_to_obj_files(dir_path=config["output_dirs"]["mesh"])
+    mesh_processor.save_to_obj_files(dir_path=config["output_dirs"]["mesh"])
     mesh_processor.render_to_video(dir_path=config["output_dirs"]["video"])
 
 

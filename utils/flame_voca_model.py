@@ -84,14 +84,24 @@ class FlameVocaModel(VocaModel):
             audio_curr = audio[..., 1]
 
             with tf.GradientTape() as tape:
-                # pred_flame_params_prev = self.model([audio_prev], training=False)
+                pred_flame_params_prev = self.model([audio_prev], training=False)
                 pred_flame_params_curr = self.model([audio_curr], training=is_training)
-                # TODO prev 算 velocity
+
                 assert pred_flame_params_curr.shape[1] == 415
+
+                pred_pcd_prev = tf.map_fn(
+                    lambda x: Flame.calculate_pcd_by_param(x), pred_flame_params_prev
+                )
                 pred_pcd_curr = tf.map_fn(
                     lambda x: Flame.calculate_pcd_by_param(x), pred_flame_params_curr
                 )
-                loss = self.position_loss(true_pcd_curr, pred_pcd_curr)
+
+                # loss = self.position_loss(true_pcd_curr, pred_pcd_curr)
+                loss = self.position_loss(
+                    true_pcd_curr, pred_pcd_curr
+                ) + 10.0 * self.velocity_loss(
+                    true_pcd_prev, pred_pcd_prev, true_pcd_curr, pred_pcd_curr
+                )
 
             gradients = tape.gradient(loss, self.model.trainable_variables)  # 計算梯度
             self.optimizer.apply_gradients(

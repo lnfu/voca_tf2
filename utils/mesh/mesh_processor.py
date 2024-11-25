@@ -12,9 +12,13 @@ from ..common import log_execution, check_and_create_directory
 
 class MeshProcessor:
     def __init__(
-        self, pcds=None, delta_pcds=None, template: meshio.Mesh = None
+        self,
+        pcds=None,
+        delta_pcds=None,
+        template_pcds=None,
+        template: meshio.Mesh = None,
     ) -> None:
-
+        # TODO refactor
         if pcds is not None:
             triangles = []
             with open(
@@ -27,6 +31,19 @@ class MeshProcessor:
                         )  # 1-index (.obj format) -> 0-index (meshio)
                     )
             faces = [("triangle", triangles)]
+        elif delta_pcds is not None and template_pcds is not None:
+            triangles = []
+            with open(
+                os.path.join(os.path.dirname(__file__), "triangles.txt"), "r"
+            ) as file:
+                for line in file:
+                    triangles.append(
+                        list(
+                            map(lambda x: int(x) - 1, line.split(" "))
+                        )  # 1-index (.obj format) -> 0-index (meshio)
+                    )
+            faces = [("triangle", triangles)]
+            pcds = delta_pcds + template_pcds
         elif delta_pcds is not None and template is not None:
             faces = template.cells
             pcds = delta_pcds + template.points

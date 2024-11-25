@@ -8,6 +8,7 @@ import logging
 from .batcher import Batcher
 from .common import log_execution
 
+
 @tf.function
 def compute_pcd_sse(x, y):
     squared_difference_per_point = tf.math.squared_difference(x, y)  # (?, 5023, 3)
