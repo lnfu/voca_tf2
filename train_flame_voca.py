@@ -30,7 +30,7 @@ def main():
     data_handler = DataHandler(
         audio_raw_path=data_config["path"]["audio"]["raw"],
         audio_processed_path=data_config["path"]["audio"]["processed"],
-        mesh_path="data/meshes",  # TODO
+        mesh_path=data_config["path"]["mesh"], 
     )
 
     subject_names = data_config["subjects"]

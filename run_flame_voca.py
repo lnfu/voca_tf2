@@ -37,7 +37,7 @@ logging.basicConfig(
 def main():
     config = load_config("config.yaml")
 
-    audio_handler = AudioHandler(raw_path="data/audio/shakira.wav")
+    audio_handler = AudioHandler(raw_path="data/audio/OSR_us_000_0030_8k.wav")
     processed_audio = audio_handler.get_processed_data()["subject"]["sequence"]
 
     logging.info("正在載入 VOCA 模型...")
@@ -51,10 +51,6 @@ def main():
             processed_audio,
         ]
     )
-
-    print(type(flame_params))
-    np.save("temp.npy", flame_params)
-    exit(0)
 
     start_time = time.time()  # TODO
     pred_pcds = tf.map_fn(lambda x: Flame.calculate_pcd_by_param(x), flame_params)
