@@ -10,6 +10,11 @@ from .common import log_execution
 
 
 @tf.function
+def diff(arr):
+    return arr[1:] - arr[:-1]
+
+
+@tf.function
 def compute_pcd_sse(x, y):
     squared_difference_per_point = tf.math.squared_difference(x, y)  # (?, 5023, 3)
     squared_difference_sum_per_point = tf.math.reduce_sum(
@@ -74,13 +79,6 @@ class VocaModel:
             )
         else:
             raise ValueError(f"不支援的 Optimizer: {optimizer}")
-
-        logging.info("Initialized Model with the following hyperparameters:")
-        logging.info(f"Learning Rate: {self.learning_rate}")
-        logging.info(f"Epochs: {self.epochs}")
-        logging.info(f"Validation Frequency: {self.validation_freq}")
-        logging.info(f"Factor: {self.factor}")
-        logging.info(f"Optimizer: {self.optimizer}")
 
         # model
         self.model = self.build_model()
@@ -159,51 +157,23 @@ class VocaModel:
         return compute_pcd_sse(true_pcd, pred_pcd)
 
     @tf.function
-    def velocity_loss(self, true_pcd_prev, pred_pcd_prev, true_pcd_curr, pred_pcd_curr):
-        return compute_pcd_sse(
-            true_pcd_curr - true_pcd_prev, pred_pcd_curr - pred_pcd_prev
-        )
+    def velocity_loss(self, true_pcd, pred_pcd):
+        true_pcd_velocity = diff(true_pcd)
+        pred_pcd_velocity = diff(pred_pcd)
+        return compute_pcd_sse(true_pcd_velocity, pred_pcd_velocity)
+
+    @tf.function
+    def acceleration_loss(self, true_pcd, pred_pcd):
+        true_pcd_velocity = diff(true_pcd)
+        pred_pcd_velocity = diff(pred_pcd)
+
+        true_pcd_acceleration = diff(true_pcd_velocity)
+        pred_pcd_acceleration = diff(pred_pcd_velocity)
+
+        return compute_pcd_sse(true_pcd_acceleration, pred_pcd_acceleration)
 
     def run_epoch(self, loss_metric, is_training=True):
-
-        batcher = self.train_batcher if is_training else self.val_batcher
-        steps = batcher.get_num_batches()
-        progbar = tf.keras.utils.Progbar(target=steps)
-
-        for step in range(steps):
-            subject_id, template_pcd, true_pcd, audio = batcher.get_next()
-
-            true_pcd_prev = true_pcd[..., 0]
-            true_pcd_curr = true_pcd[..., 1]
-            audio_prev = audio[..., 0]
-            audio_curr = audio[..., 1]
-
-            with tf.GradientTape() as tape:
-                # TODO 是否要 training=True? (目前看起來不用, 有時間開起來看有沒有什麼問題)
-                pred_pcd_prev = template_pcd + self.model(
-                    [subject_id, audio_prev], training=False
-                )
-                pred_pcd_curr = template_pcd + self.model(
-                    [subject_id, audio_curr], training=is_training
-                )
-
-                loss = self.position_loss(
-                    true_pcd_curr, pred_pcd_curr
-                ) + 10.0 * self.velocity_loss(
-                    true_pcd_prev, pred_pcd_prev, true_pcd_curr, pred_pcd_curr
-                )
-
-            gradients = tape.gradient(loss, self.model.trainable_variables)  # 計算梯度
-            self.optimizer.apply_gradients(
-                zip(gradients, self.model.trainable_variables)
-            )  # 更新權重
-
-            loss_metric.update_state(loss)
-            progbar.update(step + 1, values=[("loss", loss_metric.result())])
-
-        logging.info(
-            f"平均 SSE ({'train' if is_training else 'val'}): {loss_metric.result()}"
-        )
+        raise NotImplementedError
 
     @log_execution
     def train(self):

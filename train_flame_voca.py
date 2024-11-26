@@ -2,7 +2,8 @@ import numpy as np
 import tensorflow as tf
 
 from tensorflow.python.client import device_lib
-print(tf.config.list_physical_devices("GPU").__len__() > 0) # 是否有使用 GPU
+
+print(tf.config.list_physical_devices("GPU").__len__() > 0)  # 是否有使用 GPU
 
 import sys
 import logging
@@ -29,9 +30,7 @@ def main():
     data_handler = DataHandler(
         audio_raw_path=data_config["path"]["audio"]["raw"],
         audio_processed_path=data_config["path"]["audio"]["processed"],
-        pcd_data_path=data_config["path"]["pcd"]["data"],
-        pcd_index_path=data_config["path"]["pcd"]["index"],
-        pcd_template_path=data_config["path"]["pcd"]["template"],
+        mesh_path="data/meshes",  # TODO
     )
 
     subject_names = data_config["subjects"]
@@ -43,23 +42,19 @@ def main():
         data_handler=data_handler,
         subject_names=subject_names["train"],
         sequence_names=sequence_names["train"],
-        batch_size=training_config["batch_size"],
-        window_size=window_size,
+        shuffle=True,
     )
 
     val_batcher = Batcher(
         data_handler=data_handler,
         subject_names=subject_names["val"],
         sequence_names=sequence_names["val"],
-        batch_size=training_config["batch_size"],
-        window_size=window_size,
     )
+
     test_batcher = Batcher(
         data_handler=data_handler,
         subject_names=subject_names["test"],
         sequence_names=sequence_names["test"],
-        batch_size=training_config["batch_size"],
-        window_size=window_size,
     )
 
     model = FlameVocaModel(
@@ -69,7 +64,7 @@ def main():
         learning_rate=training_config["learning_rate"],
         epochs=training_config["epochs"],
         validation_freq=training_config["validation_freq"],
-        optimizer=training_config["optimizer"]
+        optimizer=training_config["optimizer"],
     )
 
     model.train()

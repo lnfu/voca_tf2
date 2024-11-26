@@ -5,102 +5,52 @@ from utils.data_handlers.data_handler import DataHandler
 
 
 class Batcher:
-    def get_num_data(self):
-        return len(self.data)
-
-    def get_num_batches(self):
-        return self.get_num_data() // self.batch_size
-
-    def get_num_subjects(self):
-        return len(self.subject_names)
-
-    def get_subject_id_by_name(self, name: str, default_value: int = None):
-        try:
-            return self.subject_names.index(name)
-        except ValueError:
-            if default_value is not None:
-                return default_value
-            return np.random.randint(0, len(self.subject_names))
 
     def __init__(
         self,
         data_handler: DataHandler,
-        subject_names: set[str],
+        subject_names: set[str],  # 目前只會挑一個 subject
         sequence_names: set[str],
-        batch_size: int = 64,
-        window_size: int = 1,  # 主要計算 loss (velocity) 才會用到
-        shuffle: bool = True,
+        shuffle: bool = False,  # 只會打亂句子
     ):
-
-        self.data_handler = data_handler
-        self.batch_size = batch_size
-        self.window_size = window_size
-        self.subject_names = subject_names
 
         self.shuffle = shuffle
 
-        # filter
-        filtered = {
-            subject_name: {
-                sequence_name: [
-                    window[
-                        : self.window_size
-                    ]  # 每個 window 只取前 self.window_size 並且不能有 None
-                    for window in sequence_data
-                    if all(
-                        window_item is not None
-                        for window_item in window[: self.window_size]
-                    )
-                ]
-                for sequence_name, sequence_data in subject_data.items()
-                if sequence_name in sequence_names
-            }
-            for subject_name, subject_data in self.data_handler.data.items()
-            if subject_name in subject_names
-        }
+        self.data = []
 
-        # flatten
-        self.data = [
-            window
-            for subject_data in filtered.values()
-            for sequence_data in subject_data.values()
-            for window in sequence_data
-        ]
+        for subject_name in subject_names:
+            for sequence_name in sequence_names:
+                if data_handler.is_subject_sequence_pair_valid(
+                    subject_name, sequence_name
+                ):
+                    data_ = {}
+                    data_["num_frame"] = data_handler.get_num_frame(
+                        subject_name, sequence_name
+                    )
+                    data_["audio"] = data_handler.audio_processed_data[subject_name][
+                        sequence_name
+                    ]
+                    data_["pcd"] = data_handler.pcd_data[subject_name][sequence_name]
+                    self.data.append(data_)
 
         self.reset()
 
-    def get_next(self):
-
-        if self.current_index >= len(self.data):
-            self.reset()
-
-        batch_data_index_only = self.data[
-            self.current_index : self.current_index + self.batch_size
-        ]  # 這種寫法右界超過也沒關係
-
-        batch_subject_name, batch_template_pcd, batch_pcd, batch_audio = (
-            self.data_handler.unpack_data(batch_data_index_only)
-        )
-
-        batch_subject_id = [
-            self.get_subject_id_by_name(subject_name)  # random if not valid
-            # self.get_subject_id_by_name(subject_name, 0) # 0 if not valid
-            for subject_name in batch_subject_name
-        ]
-
-        self.current_index += self.batch_size  # 更新 current_index
-
-        return (
-            tf.convert_to_tensor(np.array(batch_subject_id), dtype=tf.float32),  # (None, 64, 8)
-            tf.convert_to_tensor(batch_template_pcd, dtype=tf.float32),  # (None, 5023, 3)
-            tf.convert_to_tensor(batch_pcd, dtype=tf.float32),  # (None, 5023, 3, 2)
-            tf.convert_to_tensor(batch_audio, dtype=tf.float32),  # (None, 16, 29, 2)
-        )
-
     def reset(self):
-        self.current_index = 0
+        self.current_batch_index = 0
         if self.shuffle:
             self.shuffle_data()
+
+    def get_num_batches(self):
+        return len(self.data)
+
+    def get_next(self):
+
+        if self.current_batch_index >= self.get_num_batches():
+            self.reset()
+        
+        data_ = self.data[self.current_batch_index]
+
+        return data_["num_frame"], data_["audio"], data_["pcd"]
 
     def shuffle_data(self):
         import random

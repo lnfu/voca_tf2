@@ -5,6 +5,22 @@ import logging
 
 from functools import wraps
 
+subject_names = [
+    "FaceTalk_170725_00137_TA",
+    "FaceTalk_170728_03272_TA",
+    "FaceTalk_170731_00024_TA",
+    "FaceTalk_170809_00138_TA",
+    "FaceTalk_170811_03274_TA",
+    "FaceTalk_170811_03275_TA",
+    "FaceTalk_170904_00128_TA",
+    "FaceTalk_170904_03276_TA",
+    "FaceTalk_170908_03277_TA",
+    "FaceTalk_170912_03278_TA",
+    "FaceTalk_170913_03279_TA",
+    "FaceTalk_170915_00223_TA",
+]
+
+sequence_names = [f"sentence{i+1:02}" for i in range(40)]
 
 def check_file_exists(file_path):
     if not os.path.exists(file_path):

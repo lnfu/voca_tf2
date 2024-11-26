@@ -67,11 +67,10 @@ data:
       - sentence40
 
 training:
-  batch_size: 64
   loss_weights:
     - 1
     - 10 # velocity loss
   optimizer: "Adam"
   learning_rate: 0.0001
-  epochs: 50
+  epochs: 100
   validation_freq: 10

@@ -41,12 +41,6 @@ def overwrite_config_from_cli(config: dict):
         help="Learning rate for training",
     )
     parser.add_argument(
-        "--batch_size",
-        type=int,
-        default=config["training"]["batch_size"],
-        help="Batch size for training",
-    )
-    parser.add_argument(
         "--epochs",
         type=int,
         default=config["training"]["epochs"],
@@ -64,7 +58,6 @@ def overwrite_config_from_cli(config: dict):
     config["training"].update(
         {
             "learning_rate": args.learning_rate,
-            "batch_size": args.batch_size,
             "epochs": args.epochs,
             "validation_freq": args.validation_freq,
         }

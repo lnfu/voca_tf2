@@ -1,8 +1,5 @@
-import numpy as np
-import chumpy as ch
 import tensorflow as tf
 
-import os
 import logging
 
 from .flame import Flame
@@ -76,32 +73,22 @@ class FlameVocaModel(VocaModel):
         progbar = tf.keras.utils.Progbar(target=steps)
 
         for step in range(steps):
-            subject_id, template_pcd, true_pcd, audio = batcher.get_next()
-
-            true_pcd_prev = true_pcd[..., 0]
-            true_pcd_curr = true_pcd[..., 1]
-            audio_prev = audio[..., 0]
-            audio_curr = audio[..., 1]
+            num_frame, audio, true_pcd = batcher.get_next()
 
             with tf.GradientTape() as tape:
-                pred_flame_params_prev = self.model([audio_prev], training=False)
-                pred_flame_params_curr = self.model([audio_curr], training=is_training)
+                pred_flame_params = self.model([audio], training=is_training)
 
-                assert pred_flame_params_curr.shape[1] == 415
+                assert pred_flame_params.shape[1] == 415 # TODO
 
-                pred_pcd_prev = tf.map_fn(
-                    lambda x: Flame.calculate_pcd_by_param(x), pred_flame_params_prev
-                )
-                pred_pcd_curr = tf.map_fn(
-                    lambda x: Flame.calculate_pcd_by_param(x), pred_flame_params_curr
+                pred_pcd = tf.map_fn(
+                    lambda x: Flame.calculate_pcd_by_param(x), pred_flame_params
                 )
 
-                # loss = self.position_loss(true_pcd_curr, pred_pcd_curr)
                 loss = self.position_loss(
-                    true_pcd_curr, pred_pcd_curr
+                    true_pcd, pred_pcd
                 ) + 10.0 * self.velocity_loss(
-                    true_pcd_prev, pred_pcd_prev, true_pcd_curr, pred_pcd_curr
-                )
+                    true_pcd, pred_pcd
+                ) + 10.0 * self.acceleration_loss(true_pcd, pred_pcd)
 
             gradients = tape.gradient(loss, self.model.trainable_variables)  # 計算梯度
             self.optimizer.apply_gradients(
