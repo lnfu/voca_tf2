@@ -12,7 +12,9 @@ class MeshRenderer:
     def __init__(self) -> None:
         pass
 
-    def render_mesh_to_image(self, mesh: meshio.Mesh, center, rotation=np.zeros(3)):
+    def render_mesh_to_image(self, mesh: meshio.Mesh, center=np.zeros(3), rotation=np.zeros(3)):
+
+        print(center)
 
         camera_params = {
             "optical_center": [400.0, 400.0],

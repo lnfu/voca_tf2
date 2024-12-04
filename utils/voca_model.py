@@ -193,8 +193,8 @@ class VocaModel:
             self.run_epoch(train_loss_metric, is_training=True)
             with train_summary_writer.as_default():
                 tf.summary.scalar("loss", train_loss_metric.result(), step=epoch)
-
-            if (epoch + 1) % self.validation_freq == 0:
+            
+            if self.validation_freq != 0 and (epoch + 1) % self.validation_freq == 0:
                 self.run_epoch(val_loss_metric, is_training=False)
                 with val_summary_writer.as_default():
                     tf.summary.scalar("loss", val_loss_metric.result(), step=epoch)

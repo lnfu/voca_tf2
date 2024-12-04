@@ -56,12 +56,12 @@ data:
       - sentence34
       - sentence35
       - sentence36
-    val:
       - sentence37
       - sentence38
-    test:
       - sentence39
       - sentence40
+    val:
+    test:
 
 training:
   loss_weights:
@@ -69,5 +69,6 @@ training:
     - 10 # velocity loss
   optimizer: "Adam"
   learning_rate: 0.0001
-  epochs: 100
-  validation_freq: 10
+  epochs: 50
+  validation_freq: 0
+  batch_size: 64 # TODO

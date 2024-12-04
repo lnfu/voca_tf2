@@ -53,8 +53,8 @@ class MeshProcessor:
             )
 
         self.meshes = [meshio.Mesh(points=pcd, cells=faces) for pcd in pcds]
-        centers = np.mean(pcds, axis=1)  # (?, 3)
-        self.center = np.mean(centers, axis=0)  # (3, )
+        # centers = np.mean(pcds, axis=1)  # (?, 3)
+        # self.center = np.mean(centers, axis=0)  # (3, )
 
     @log_execution
     def render_to_video(self, dir_path: str):
@@ -71,7 +71,8 @@ class MeshProcessor:
         )
 
         for i, mesh in enumerate(self.meshes):
-            image = mesh_renderer.render_mesh_to_image(mesh=mesh, center=self.center)
+            # image = mesh_renderer.render_mesh_to_image(mesh=mesh, center=self.center)
+            image = mesh_renderer.render_mesh_to_image(mesh=mesh)
             video_writer.write(image=image)
             progbar.update(i + 1)
         video_writer.release()

@@ -26,6 +26,9 @@ class PointCloudHandler:
             for sentence in common.sequence_names:
                 dir_path = os.path.join(self.mesh_path, subject, sentence)
 
+                if not os.path.exists(dir_path):
+                    continue
+
                 pcds_file_path = os.path.join(dir_path, pcds_file_name)
                 if not reset and os.path.exists(pcds_file_path):
                     pcds_ = self.get_pcds_from_npy(pcds_file_path)

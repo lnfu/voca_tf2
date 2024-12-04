@@ -30,7 +30,7 @@ def main():
     data_handler = DataHandler(
         audio_raw_path=data_config["path"]["audio"]["raw"],
         audio_processed_path=data_config["path"]["audio"]["processed"],
-        mesh_path=data_config["path"]["mesh"], 
+        mesh_path=data_config["path"]["mesh"],
     )
 
     subject_names = data_config["subjects"]
@@ -67,9 +67,13 @@ def main():
         optimizer=training_config["optimizer"],
     )
 
-    model.train()
-    # model.eval()
-    model.save(dir_path=config["model_dir"])
+    try:
+        model.train()
+    except KeyboardInterrupt:
+        logging.warning("強制結束")
+    finally:
+        model.eval()
+        model.save(dir_path=config["model_dir"])
 
 
 if __name__ == "__main__":

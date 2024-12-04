@@ -73,7 +73,7 @@ class FlameVocaModel(VocaModel):
         progbar = tf.keras.utils.Progbar(target=steps)
 
         for step in range(steps):
-            num_frame, audio, true_pcd = batcher.get_next()
+            audio, true_pcd = batcher.get_next()
 
             with tf.GradientTape() as tape:
                 pred_flame_params = self.model([audio], training=is_training)
@@ -86,8 +86,7 @@ class FlameVocaModel(VocaModel):
 
                 loss = self.position_loss(
                     true_pcd, pred_pcd
-                ) 
-                # + 10.0 * self.velocity_loss(true_pcd, pred_pcd)
+                ) + 10.0 * self.velocity_loss(true_pcd, pred_pcd) + 100.0 * self.acceleration_loss(true_pcd, pred_pcd)
 
             gradients = tape.gradient(loss, self.model.trainable_variables)  # 計算梯度
             self.optimizer.apply_gradients(
