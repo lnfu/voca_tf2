@@ -7,5 +7,4 @@ run:
 clean:
 	rm -rf models/
 	rm -rf checkpoints/
-	rm -rf outputs/
 	rm -rf logs/

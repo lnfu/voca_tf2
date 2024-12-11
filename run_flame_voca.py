@@ -43,7 +43,7 @@ def main():
     logging.info("正在載入 VOCA 模型...")
     model = tf.keras.models.load_model(config["model_dir"])
     logging.info("VOCA 模型成功載入!")
-    np.save("shape.npy", model.trainable_variables[-1])
+    # np.save("shape.npy", model.trainable_variables[-1])
 
     # prediction
     flame_params = model.predict(
@@ -63,7 +63,7 @@ def main():
 
     mesh_processor = MeshProcessor(pcds=pred_pcds)
     mesh_processor.save_to_obj_files(dir_path=config["output_dirs"]["mesh"])
-    mesh_processor.render_to_video(dir_path=config["output_dirs"]["video"])
+    mesh_processor.save_to_video(dir_path=config["output_dirs"]["video"])
 
 
 if __name__ == "__main__":

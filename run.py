@@ -49,7 +49,7 @@ def main():
     assert num_frames == delta_pcds.shape[0]  # TODO
     mesh_processor = MeshProcessor(delta_pcds=delta_pcds, template_pcds=template_pcds)
     mesh_processor.save_to_obj_files(dir_path=config["output_dirs"]["mesh"])
-    mesh_processor.render_to_video(dir_path=config["output_dirs"]["video"])
+    mesh_processor.save_to_video(dir_path=config["output_dirs"]["video"])
 
 
 if __name__ == "__main__":

@@ -13,15 +13,15 @@ class DataHandler:
         self,
         audio_raw_path,
         audio_processed_path,
-        mesh_path,
+        mesh_dir_path,
     ):
         audio_data_handler = AudioHandler(
             raw_path=audio_raw_path, processed_path=audio_processed_path
         )
         self.audio_processed_data = audio_data_handler.get_processed_data()
 
-        pcd_data_handler = PointCloudHandler(mesh_path=mesh_path)
-        self.pcd_data = pcd_data_handler.get_processed_data()
+        pcd_data_handler = PointCloudHandler(mesh_path=mesh_dir_path)
+        self.pcd_data = pcd_data_handler.get_processed_data() # TODO reset=True
 
         self.validate_data()
 

@@ -1,0 +1,21 @@
+services:
+  dev:
+    container_name: voca_tf2_dev
+    build: .
+    runtime: nvidia
+    user: efliao
+    volumes:
+      - .:/home/efliao
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+    ipc: host
+    ulimits:
+      memlock: -1
+      stack: 67108864

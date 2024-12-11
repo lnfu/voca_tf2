@@ -84,14 +84,20 @@ class FlameVocaModel(VocaModel):
                     lambda x: Flame.calculate_pcd_by_param(x), pred_flame_params
                 )
 
-                loss = self.position_loss(
-                    true_pcd, pred_pcd
-                ) + 10.0 * self.velocity_loss(true_pcd, pred_pcd) + 100.0 * self.acceleration_loss(true_pcd, pred_pcd)
+                # TODO loss config
+                loss = 0.0
+                if self.loss_weights["pos"] != 0:
+                    loss += self.loss_weights["pos"] * self.position_loss(true_pcd, pred_pcd)
+                if self.loss_weights["vel"] != 0:
+                    loss += self.loss_weights["vel"] * self.velocity_loss(true_pcd, pred_pcd)
+                if self.loss_weights["acc"] != 0:
+                    loss += self.loss_weights["acc"] * self.acceleration_loss(true_pcd, pred_pcd)
 
-            gradients = tape.gradient(loss, self.model.trainable_variables)  # 計算梯度
-            self.optimizer.apply_gradients(
-                zip(gradients, self.model.trainable_variables)
-            )  # 更新權重
+                if is_training:
+                    gradients = tape.gradient(loss, self.model.trainable_variables)  # 計算梯度
+                    self.optimizer.apply_gradients(
+                        zip(gradients, self.model.trainable_variables)
+                    )  # 更新權重
 
             loss_metric.update_state(loss)
             progbar.update(step + 1, values=[("loss", loss_metric.result())])

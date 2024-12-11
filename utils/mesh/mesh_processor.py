@@ -57,7 +57,7 @@ class MeshProcessor:
         # self.center = np.mean(centers, axis=0)  # (3, )
 
     @log_execution
-    def render_to_video(self, dir_path: str):
+    def save_to_video(self, dir_path: str):
         mesh_renderer = MeshRenderer()
         progbar = tf.keras.utils.Progbar(self.num_frames)
         # save

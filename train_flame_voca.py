@@ -30,18 +30,17 @@ def main():
     data_handler = DataHandler(
         audio_raw_path=data_config["path"]["audio"]["raw"],
         audio_processed_path=data_config["path"]["audio"]["processed"],
-        mesh_path=data_config["path"]["mesh"],
+        mesh_dir_path=data_config["path"]["mesh"],
     )
 
     subject_names = data_config["subjects"]
     sequence_names = data_config["sequences"]
 
-    window_size = len(training_config["loss_weights"])
-
     train_batcher = Batcher(
         data_handler=data_handler,
         subject_names=subject_names["train"],
         sequence_names=sequence_names["train"],
+        batch_size=training_config["batch_size"],
         shuffle=True,
     )
 
@@ -49,12 +48,14 @@ def main():
         data_handler=data_handler,
         subject_names=subject_names["val"],
         sequence_names=sequence_names["val"],
+        batch_size=training_config["batch_size"],
     )
 
     test_batcher = Batcher(
         data_handler=data_handler,
         subject_names=subject_names["test"],
         sequence_names=sequence_names["test"],
+        batch_size=training_config["batch_size"],
     )
 
     model = FlameVocaModel(
@@ -65,6 +66,7 @@ def main():
         epochs=training_config["epochs"],
         validation_freq=training_config["validation_freq"],
         optimizer=training_config["optimizer"],
+        loss_weights=training_config["loss_weights"],
     )
 
     try:

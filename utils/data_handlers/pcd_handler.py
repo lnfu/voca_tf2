@@ -55,6 +55,7 @@ class PointCloudHandler:
                 meshes[ply_file_path] = meshio.read(
                     os.path.join(dir_path, ply_file_path)
                 )
+
         return np.stack(
             [mesh.points for _, mesh in sorted(meshes.items())]
         )  # per subject per sentence

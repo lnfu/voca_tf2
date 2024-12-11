@@ -12,7 +12,7 @@ class Batcher:
         subject_names: set[str],  # 目前只會挑一個 subject
         sequence_names: set[str],
         shuffle: bool = False,  # 只會打亂句子
-        batch_size: int = 16,
+        batch_size: int = 64,
     ):
 
         self.shuffle = shuffle

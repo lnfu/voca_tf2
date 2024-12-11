@@ -13,11 +13,11 @@ data:
     
   subjects:
     train:
-      - FaceTalk_170915_00223_TA
+      - FaceTalk_170811_03274_TA
     val:
-      - FaceTalk_170915_00223_TA
+      - FaceTalk_170811_03274_TA
     test:
-      - FaceTalk_170915_00223_TA
+      - FaceTalk_170811_03274_TA
   sequences:
     train:
       - sentence01
@@ -58,17 +58,18 @@ data:
       - sentence36
       - sentence37
       - sentence38
+    val:
       - sentence39
       - sentence40
-    val:
     test:
 
 training:
   loss_weights:
-    - 1
-    - 10 # velocity loss
+    pos: 1
+    vel: 0
+    acc: 0
   optimizer: "Adam"
   learning_rate: 0.0001
-  epochs: 50
-  validation_freq: 0
+  epochs: 100
+  validation_freq: 5
   batch_size: 64 # TODO

@@ -14,8 +14,6 @@ class MeshRenderer:
 
     def render_mesh_to_image(self, mesh: meshio.Mesh, center=np.zeros(3), rotation=np.zeros(3)):
 
-        print(center)
-
         camera_params = {
             "optical_center": [400.0, 400.0],
             "focal_length": [4754.97941935 / 2, 4754.97941935 / 2],  # TODO 數值?

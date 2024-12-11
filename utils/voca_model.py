@@ -7,7 +7,7 @@ import logging
 
 from .batcher import Batcher
 from .common import log_execution
-
+from tensorflow.python.summary.summary_iterator import summary_iterator
 
 @tf.function
 def diff(arr):
@@ -54,6 +54,7 @@ class VocaModel:
         learning_rate: float,
         epochs: int,
         validation_freq: int,
+        loss_weights,
         factor: float = 1.0,
         optimizer: str = "Adam",
         beta_1: float = 0.9,
@@ -70,12 +71,18 @@ class VocaModel:
         self.epochs = epochs
         self.validation_freq = validation_freq
         self.factor = factor
+        self.loss_weights = loss_weights
 
         # optimizer
         if optimizer.lower() == "adam":
             self.optimizer = tf.keras.optimizers.Adam(
                 learning_rate=self.learning_rate,
                 beta_1=beta_1,
+            )
+        elif optimizer.lower() == "sgd":
+            self.optimizer = tf.keras.optimizers.SGD(
+                learning_rate=self.learning_rate,
+                clipnorm=1.
             )
         else:
             raise ValueError(f"不支援的 Optimizer: {optimizer}")
@@ -94,11 +101,11 @@ class VocaModel:
         )
         if not reset and self.checkpoint_manager.latest_checkpoint:
             logging.info(
-                f"Restoring from checkpoint: {self.checkpoint_manager.latest_checkpoint}"
+                f"根據 checkpoint 繼續訓練: {self.checkpoint_manager.latest_checkpoint}"
             )
             self.checkpoint.restore(self.checkpoint_manager.latest_checkpoint)
         elif reset:
-            logging.info("Starting fresh training, ignoring checkpoints")
+            logging.info("從頭開始訓練 (忽略 checkpoint)")
 
     def build_model(self) -> tf.keras.Model:
         subject_id_ont_hot_shape = (None,)
@@ -175,29 +182,47 @@ class VocaModel:
     def run_epoch(self, loss_metric, is_training=True):
         raise NotImplementedError
 
+    def get_last_logged_epoch(self, log_dir : str):
+        latest_epoch = 0
+
+        if not os.path.exists(log_dir):
+            return latest_epoch
+
+        for root, dirs, files in os.walk(log_dir):
+            for file in files:
+                if "events.out.tfevents" in file:
+                    event_file = os.path.join(root, file)
+                    for summary in summary_iterator(event_file):
+                        for value in summary.summary.value:
+                            if value.tag == "train_loss":  
+                                latest_epoch = max(latest_epoch, summary.step)
+        return latest_epoch
+
     @log_execution
     def train(self):
-        logging.info(f"開始跑 {self.epochs} 個 epoch")
+        log_name = "04" # TODO rename var
+
+        latest_epoch = self.get_last_logged_epoch(str(os.path.join("logs/", f"train_{log_name}")))
 
         train_summary_writer = tf.summary.create_file_writer(
-            os.path.join("logs/", "train")
+            os.path.join("logs/", f"train_{log_name}")
         )
-        val_summary_writer = tf.summary.create_file_writer(os.path.join("logs/", "val"))
+        val_summary_writer = tf.summary.create_file_writer(os.path.join("logs/", f"val_{log_name}"))
 
-        train_loss_metric = tf.keras.metrics.Mean(name="train_loss")
-        val_loss_metric = tf.keras.metrics.Mean(name="val_loss")
+        train_loss_metric = tf.keras.metrics.Mean(name="train_loss_metric")
+        val_loss_metric = tf.keras.metrics.Mean(name="val_loss_metric")
 
         for epoch in range(self.epochs):
             logging.info(f"Epoch {epoch+1}/{self.epochs}")
 
             self.run_epoch(train_loss_metric, is_training=True)
             with train_summary_writer.as_default():
-                tf.summary.scalar("loss", train_loss_metric.result(), step=epoch)
+                tf.summary.scalar("loss", train_loss_metric.result(), step=epoch + latest_epoch + 1)
             
-            if self.validation_freq != 0 and (epoch + 1) % self.validation_freq == 0:
+            if self.validation_freq != 0 and epoch % self.validation_freq == 0:
                 self.run_epoch(val_loss_metric, is_training=False)
                 with val_summary_writer.as_default():
-                    tf.summary.scalar("loss", val_loss_metric.result(), step=epoch)
+                    tf.summary.scalar("loss", val_loss_metric.result(), step=epoch + latest_epoch + 1)
 
             train_loss_metric.reset_states()
             val_loss_metric.reset_states()
