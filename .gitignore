@@ -82,3 +82,4 @@ checkpoints
 logs
 # VSCode
 .vscode/
+.viminfo

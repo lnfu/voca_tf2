@@ -19,7 +19,6 @@ RUN pip install resampy==0.4.3 \
 
 RUN pip install pyopengl==3.1.4
 
-
 RUN groupadd -g 1000 efliao
 
 RUN useradd --uid 1000 --gid 1000 --groups root,sudo,adm,users --create-home --password "`openssl passwd -6 -salt XX 12345678`" --shell /bin/bash efliao

@@ -67,6 +67,7 @@ def main():
         validation_freq=training_config["validation_freq"],
         optimizer=training_config["optimizer"],
         loss_weights=training_config["loss_weights"],
+        reset=True # TODO config
     )
 
     try:

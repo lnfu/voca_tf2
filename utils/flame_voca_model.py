@@ -46,23 +46,24 @@ class FlameVocaModel(VocaModel):
         conv1 = build_conv_layer(name="conv1", x=x, filters=int(32 * self.factor))
 
         # 第二層: conv2d (None, 4, 1, 32)
-        conv2 = build_conv_layer(name="conv2", x=conv1, filters=int(32 * self.factor))
+        conv2 = build_conv_layer(name="conv2", x=conv1, filters=int(64 * self.factor))
 
         # 第三層: conv2d (None, 2, 1, 64)
-        conv3 = build_conv_layer(name="conv3", x=conv2, filters=int(64 * self.factor))
+        conv3 = build_conv_layer(name="conv3", x=conv2, filters=int(128 * self.factor))
 
         # 第四層: conv2d (None, 1, 1, 64)
-        conv4 = build_conv_layer(name="conv4", x=conv3, filters=int(64 * self.factor))
+        conv4 = build_conv_layer(name="conv4", x=conv3, filters=int(256 * self.factor))
 
         x = tf.keras.layers.Flatten()(conv4)
 
-        fc1 = tf.keras.layers.Dense(units=128, activation="tanh", name="fc1")(x)
-        fc2 = tf.keras.layers.Dense(units=50, activation=None, name="fc2")(fc1)
-        fc3 = tf.keras.layers.Dense(units=115, activation=None, name="fc3")(
-            fc2
+        fc1 = tf.keras.layers.Dense(units=256, activation="silu", name="fc1")(x)
+        fc2 = tf.keras.layers.Dense(units=512, activation="silu", name="fc2")(fc1)
+        fc3 = tf.keras.layers.Dense(units=1024, activation="silu", name="fc3")(fc2)
+        fc4 = tf.keras.layers.Dense(units=115, activation=None, name="fc4")(
+            fc3
         )  # (?, 115) FLAME expression (100) + pose (15) parameters
 
-        y = ConcatShapeLayer()(fc3)
+        y = ConcatShapeLayer()(fc4)
 
         return tf.keras.Model(inputs=[input_x], outputs=[y])
 

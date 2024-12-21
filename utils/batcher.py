@@ -61,6 +61,7 @@ class Batcher:
             self.reset()
 
         data_ = self.data[self.current_batch_index]
+        self.current_batch_index += 1
 
         return data_["audio"], data_["pcd"]
 

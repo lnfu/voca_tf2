@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 
 import os
+from datetime import datetime
 import time
 import logging
 
@@ -33,7 +34,7 @@ def build_conv_layer(
     kernel_size=(3, 1),
     strides=(2, 1),
     padding: str = "same",
-    activation: str = "relu",
+    activation: str = "silu",
 ):
     return tf.keras.layers.Conv2D(
         filters=filters,
@@ -200,7 +201,7 @@ class VocaModel:
 
     @log_execution
     def train(self):
-        log_name = "04" # TODO rename var
+        log_name = datetime.now().strftime('%Y_%m_%d_%H_%M_%S') # TODO rename var
 
         latest_epoch = self.get_last_logged_epoch(str(os.path.join("logs/", f"train_{log_name}")))
 
