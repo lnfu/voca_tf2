@@ -3,12 +3,46 @@ FROM nvcr.io/nvidia/tensorflow:23.07-tf2-py3
 
 # ENV TF_CPP_MIN_LOG_LEVEL 1
 
+ARG USERNAME=efliao
+ARG USER_UID=1000
+ARG USER_GID=1000
+
 ENV PYOPENGL_PLATFORM osmesa
 ENV MUJOCO_GL osmesa
+ENV TF_ENABLE_ONEDNN_OPTS 0
 
-RUN apt-get update && apt-get install -y sudo vim libosmesa6 ffmpeg tini
+RUN apt-get update && apt-get install -y \
+    make \
+    ffmpeg \
+    git \
+    libosmesa6 \
+    python-is-python3 \
+    sudo \
+    tini \
+    vim \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN pip install resampy==0.4.3 \ 
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+RUN echo $USERNAME
+
+RUN mkdir /app \
+    && chown $USERNAME:$USERNAME /app
+
+USER $USERNAME
+WORKDIR /app
+
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    autopep8==2.3.1 \
+    flake8==7.1.1 \
+    pycodestyle==2.12.1
+
+RUN pip install \
+    resampy==0.4.3 \
     python-speech-features==0.6 \
     opencv-python==4.10.0.84 \
     trimesh==4.4.9 \
@@ -19,11 +53,5 @@ RUN pip install resampy==0.4.3 \
 
 RUN pip install pyopengl==3.1.4
 
-RUN groupadd -g 1000 efliao
-
-RUN useradd --uid 1000 --gid 1000 --groups root,sudo,adm,users --create-home --password "`openssl passwd -6 -salt XX 12345678`" --shell /bin/bash efliao
-RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-
-WORKDIR /home/efliao
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["tail", "-f" ,"/dev/null"]

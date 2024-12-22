@@ -16,7 +16,8 @@ class Inference:
     def predict_delta_pcds(self, subject_id, processed_audio):
         return self.model.predict(
             [
-                np.repeat(subject_id, processed_audio.shape[0], axis=0),  # subject id = 0
+                # subject id = 0
+                np.repeat(subject_id, processed_audio.shape[0], axis=0),
                 processed_audio,
             ]
         )

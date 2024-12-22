@@ -83,3 +83,11 @@ logs
 # VSCode
 .vscode/
 .viminfo
+.ssh
+.gnupg
+.vscode-server
+.dotnet
+.gitconfig
+.bash_history
+.keras
+.sudo_as_admin_successful

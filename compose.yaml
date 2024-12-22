@@ -5,7 +5,7 @@ services:
     runtime: nvidia
     user: efliao
     volumes:
-      - .:/home/efliao
+      - .:/app
     stdin_open: true
     tty: true
     deploy:

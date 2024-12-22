@@ -1,6 +1,3 @@
-# TODO 使用 keras progress bar
-# TODO 加上從中間開始指定 mesh 輸出影片
-
 import numpy as np
 import tensorflow as tf
 
@@ -37,7 +34,8 @@ def main():
 
     # template: meshio.Mesh = meshio.read(filename="data/FLAME_sample.ply", file_format="ply") # TODO 自訂 template?
 
-    template_pcds = load_pickle("data/templates.pkl")["FaceTalk_170728_03272_TA"]
+    template_pcds = load_pickle(
+        "data/templates.pkl")["FaceTalk_170728_03272_TA"]
 
     audio_handler = AudioHandler(raw_path="data/audio/sample_female_01.wav")
     processed_audio = audio_handler.get_processed_data()["subject"]["sequence"]
@@ -47,7 +45,8 @@ def main():
 
     num_frames = processed_audio.shape[0]
     assert num_frames == delta_pcds.shape[0]  # TODO
-    mesh_processor = MeshProcessor(delta_pcds=delta_pcds, template_pcds=template_pcds)
+    mesh_processor = MeshProcessor(
+        delta_pcds=delta_pcds, template_pcds=template_pcds)
     mesh_processor.save_to_obj_files(dir_path=config["output_dirs"]["mesh"])
     mesh_processor.save_to_video(dir_path=config["output_dirs"]["video"])
 

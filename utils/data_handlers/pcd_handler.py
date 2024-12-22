@@ -7,9 +7,8 @@ import tensorflow as tf
 
 from .. import common
 
-# TODO subjects and sentences move to another place
-
 pcds_file_name = "pcds.npy"
+
 
 class PointCloudHandler:
     def __init__(self, mesh_path):
@@ -18,7 +17,8 @@ class PointCloudHandler:
     def get_processed_data(self, reset: bool = False):
         pcds = {}
 
-        progbar = tf.keras.utils.Progbar(target=len(common.subject_names) * len(common.sequence_names))
+        progbar = tf.keras.utils.Progbar(target=len(
+            common.subject_names) * len(common.sequence_names))
         step = 0
         for subject in common.subject_names:
             pcds[subject] = {}
@@ -59,4 +59,3 @@ class PointCloudHandler:
         return np.stack(
             [mesh.points for _, mesh in sorted(meshes.items())]
         )  # per subject per sentence
-

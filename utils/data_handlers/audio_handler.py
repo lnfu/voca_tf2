@@ -5,6 +5,7 @@ import os
 import pickle
 import logging
 import resampy
+import subprocess
 
 from scipy.io import wavfile
 from python_speech_features import mfcc
@@ -13,14 +14,30 @@ from ..common import check_file_exists, load_pickle, log_execution
 
 class AudioHandler:
     def __init__(self, raw_path: str, processed_path: str = None):
-        self.raw_path = raw_path
+        check_file_exists(raw_path)
+        raw_path_base, raw_path_ext = os.path.splitext(raw_path)
+        if raw_path_ext == "pkl":  # raw_audio_fixed.pkl
+            self.audio_path = raw_path_base
+        else:
+            self.audio_path = f"{raw_path_base}_extracted.wav"
+
+        # 轉檔 (wav) + extract 單聲道
+        subprocess.run([
+            "ffmpeg",
+            "-i",
+            raw_path,
+            "-ac",
+            "1",
+            self.audio_path
+        ])
+
+        # 如果有在 config.yaml 指定 processed 路徑
         if processed_path is None:
-            base = os.path.splitext(raw_path)[0]
-            self.processed_path = f"{base}_processed.pkl"
+            self.processed_path = f"{raw_path_base}_processed.pkl"
         else:
             self.processed_path = processed_path
 
-        # TODO 寫進 config.yaml
+        # DeepSpeech features
         self.num_features = 29
         self.window_size = 16
         self.stride = 1
@@ -46,16 +63,16 @@ class AudioHandler:
 
     def get_processed_data(self):
         if os.path.exists(self.processed_path):
-            logging.info(f"使用已處理過的音訊 {self.processed_path}")
+            logging.info(f"載入已處理音訊: {self.processed_path}")
             return load_pickle(self.processed_path)
 
-        logging.info(f"音訊尚未處理")
-
-        check_file_exists(self.raw_path)
-
-        ext = os.path.splitext(self.raw_path)[1].lower()
-        if ext == ".wav":
-            sample_rate, audio = wavfile.read(self.raw_path)
+        logging.info("音訊未處理，準備開始處理")
+        check_file_exists(self.audio_path)
+        _, audio_path_ext = os.path.splitext(self.audio_path)
+        if audio_path_ext == ".pkl":
+            raw_data = load_pickle(self.audio_path)
+        else:
+            sample_rate, audio = wavfile.read(self.audio_path)
             raw_data = {
                 "subject": {
                     "sequence": {
@@ -64,27 +81,21 @@ class AudioHandler:
                     }
                 }
             }
-        elif ext == ".pkl":
-            raw_data = load_pickle(self.raw_path)
-        else:
-            raise ValueError(f"不支援的音檔類型: {ext}")
 
         processed_data = self.batch_process(raw_data)
         pickle.dump(
             processed_data, open(self.processed_path, "wb")
         )  # save processed_data
-
         return processed_data
 
     @log_execution
-    def batch_process(self, raw_data):  # TODO refactor (封裝)
-        # 先載入 deepspeech 模型 (好像是 6 層)
+    def batch_process(self, raw_data):
+        # 載入 DeepSpeech 模型 (好像是 6 層)
         # 輸入是 MFCC
         # 輸出是 (16, 29)
 
         graph = tf.Graph()
-
-        logging.info("正在載入 DeepSpeech 模型...")
+        logging.info("載入 DeepSpeech 模型")
         with graph.as_default():
             with tf.io.gfile.GFile("data/output_graph.pb", "rb") as f:
                 graph_def = tf.compat.v1.GraphDef()
@@ -94,10 +105,8 @@ class AudioHandler:
         input_tensor = graph.get_tensor_by_name("deepspeech/input_node:0")
         input_length = graph.get_tensor_by_name("deepspeech/input_lengths:0")
         logits = graph.get_tensor_by_name("deepspeech/logits:0")  # output
-        logging.info("DeepSpeech 模型成功載入!")
 
         processed_data = {}
-
         with tf.compat.v1.Session(graph=graph) as sess:
 
             for subject_name, subject_data in raw_data.items():
@@ -105,7 +114,8 @@ class AudioHandler:
 
                 for sequence_name, sequence_data in subject_data.items():
 
-                    sample_rate = sequence_data["sample_rate"]  # 22000 = 22 kHz
+                    # 22000 = 22 kHz
+                    sample_rate = sequence_data["sample_rate"]
                     raw_audio = sequence_data[
                         "audio"
                     ]  # ndarray, shape=(?,), dtype=int16
@@ -116,7 +126,7 @@ class AudioHandler:
                     resampled_audio = resampy.resample(
                         raw_audio.astype(np.float32),
                         sample_rate,
-                        16000,  # TODO why 16000?
+                        16000,
                     )
 
                     # mfcc_features shape = (x, 26)
@@ -136,7 +146,8 @@ class AudioHandler:
                     # 頭尾加上空白
                     # shape = (9 + x/2 + 9, 26)
                     zero_pad = np.zeros((9, 26), dtype=mfcc_features.dtype)
-                    mfcc_features = np.concatenate((zero_pad, mfcc_features, zero_pad))
+                    mfcc_features = np.concatenate(
+                        (zero_pad, mfcc_features, zero_pad))
 
                     deepspeech_input = np.lib.stride_tricks.as_strided(
                         mfcc_features,
@@ -173,7 +184,8 @@ class AudioHandler:
                     )
 
                     zero_pad = np.zeros(
-                        (int(self.window_size // 2), deepspeech_output.shape[1])
+                        (int(self.window_size // 2),
+                         deepspeech_output.shape[1])
                     )
                     deepspeech_output = np.concatenate(
                         (zero_pad, deepspeech_output, zero_pad), axis=0
@@ -181,10 +193,11 @@ class AudioHandler:
 
                     processed_sequence_data = []
                     for idx in range(
-                        0, deepspeech_output.shape[0] - self.window_size, self.stride
+                        0, deepspeech_output.shape[0] -
+                            self.window_size, self.stride
                     ):
                         processed_sequence_data.append(
-                            deepspeech_output[idx : idx + self.window_size]
+                            deepspeech_output[idx: idx + self.window_size]
                         )
 
                     processed_subject_data[sequence_name] = np.array(

@@ -1,14 +1,13 @@
-import numpy as np
 import tensorflow as tf
 
 import os
-from datetime import datetime
-import time
 import logging
 
 from .batcher import Batcher
 from .common import log_execution
 from tensorflow.python.summary.summary_iterator import summary_iterator
+from datetime import datetime
+
 
 @tf.function
 def diff(arr):
@@ -17,7 +16,8 @@ def diff(arr):
 
 @tf.function
 def compute_pcd_sse(x, y):
-    squared_difference_per_point = tf.math.squared_difference(x, y)  # (?, 5023, 3)
+    squared_difference_per_point = tf.math.squared_difference(
+        x, y)  # (?, 5023, 3)
     squared_difference_sum_per_point = tf.math.reduce_sum(
         squared_difference_per_point, axis=2
     )  # (?, 5023)
@@ -60,7 +60,7 @@ class VocaModel:
         optimizer: str = "Adam",
         beta_1: float = 0.9,
         reset: bool = False,
-        checkpoint_dir: str = "checkpoints/",  # TODO config.yaml
+        checkpoint_dir_path: str = "checkpoints/",
     ):
         # batcher
         self.train_batcher = train_batcher
@@ -93,7 +93,7 @@ class VocaModel:
         self.model.summary()
 
         # checkpoint
-        self.checkpoint_dir = checkpoint_dir
+        self.checkpoint_dir = checkpoint_dir_path
         self.checkpoint = tf.train.Checkpoint(
             optimizer=self.optimizer, model=self.model
         )
@@ -112,14 +112,17 @@ class VocaModel:
         subject_id_ont_hot_shape = (None,)
         deepspeech_feature_shape = (None, 16, 29)
 
-        input_c = tf.keras.Input(shape=subject_id_ont_hot_shape[1:], name="input_c")
-        input_x = tf.keras.Input(shape=deepspeech_feature_shape[1:], name="input_x")
+        input_c = tf.keras.Input(
+            shape=subject_id_ont_hot_shape[1:], name="input_c")
+        input_x = tf.keras.Input(
+            shape=deepspeech_feature_shape[1:], name="input_x")
         c = tf.keras.layers.CategoryEncoding(num_tokens=8, output_mode="one_hot")(
             input_c
         )  # (None, 8,)
 
         # Batch Normalization
-        x = tf.keras.layers.BatchNormalization(epsilon=1e-5, momentum=0.9)(input_x)
+        x = tf.keras.layers.BatchNormalization(
+            epsilon=1e-5, momentum=0.9)(input_x)
 
         x = tf.reshape(x, (-1, 16, 1, 29))  # (None, 16, 1, 29)
 
@@ -134,29 +137,35 @@ class VocaModel:
         )
 
         # 第一層: conv2d (None, 8, 1, 32)
-        conv1 = build_conv_layer(name="conv1", x=x, filters=int(32 * self.factor))
+        conv1 = build_conv_layer(
+            name="conv1", x=x, filters=int(32 * self.factor))
 
         # 第二層: conv2d (None, 4, 1, 32)
-        conv2 = build_conv_layer(name="conv2", x=conv1, filters=int(32 * self.factor))
+        conv2 = build_conv_layer(
+            name="conv2", x=conv1, filters=int(32 * self.factor))
 
         # 第三層: conv2d (None, 2, 1, 64)
-        conv3 = build_conv_layer(name="conv3", x=conv2, filters=int(64 * self.factor))
+        conv3 = build_conv_layer(
+            name="conv3", x=conv2, filters=int(64 * self.factor))
 
         # 第四層: conv2d (None, 1, 1, 64)
-        conv4 = build_conv_layer(name="conv4", x=conv3, filters=int(64 * self.factor))
+        conv4 = build_conv_layer(
+            name="conv4", x=conv3, filters=int(64 * self.factor))
 
         x = tf.keras.layers.Flatten()(conv4)
 
         # 第二次　Identity concat　加上　subject_id_ont_hot
         x = tf.keras.layers.Concatenate(axis=-1, name="id_concat2")([x, c])
 
-        fc1 = tf.keras.layers.Dense(units=128, activation="tanh", name="fc1")(x)
+        fc1 = tf.keras.layers.Dense(
+            units=128, activation="tanh", name="fc1")(x)
         fc2 = tf.keras.layers.Dense(units=50, activation=None, name="fc2")(fc1)
         fc3 = tf.keras.layers.Dense(units=5023 * 3, activation=None, name="fc3")(
             fc2
         )  # (?, 5023 * 3)
 
-        y = tf.keras.layers.Reshape((5023, 3), name="delta_pcd")(fc3)  # (?, 5023, 3)
+        y = tf.keras.layers.Reshape(
+            (5023, 3), name="delta_pcd")(fc3)  # (?, 5023, 3)
 
         return tf.keras.Model(inputs=[input_c, input_x], outputs=[y])
 
@@ -183,7 +192,11 @@ class VocaModel:
     def run_epoch(self, loss_metric, is_training=True):
         raise NotImplementedError
 
-    def get_last_logged_epoch(self, log_dir : str):
+    def get_last_logged_epoch(self, log_dir: str):
+        """
+        用來獲取上一次訓練到第幾個 iteration (epoch)
+        以便讓相同 train_tag 下的 training 可以接續紀錄
+        """
         latest_epoch = 0
 
         if not os.path.exists(log_dir):
@@ -195,20 +208,27 @@ class VocaModel:
                     event_file = os.path.join(root, file)
                     for summary in summary_iterator(event_file):
                         for value in summary.summary.value:
-                            if value.tag == "train_loss":  
+                            if value.tag == "train_loss":
                                 latest_epoch = max(latest_epoch, summary.step)
         return latest_epoch
 
     @log_execution
     def train(self):
-        log_name = datetime.now().strftime('%Y_%m_%d_%H_%M_%S') # TODO rename var
+        """
+        訓練模型
+        """
 
-        latest_epoch = self.get_last_logged_epoch(str(os.path.join("logs/", f"train_{log_name}")))
+        self.train_tag = datetime.now().strftime(
+            '%Y_%m_%d_%H_%M_%S')
+
+        latest_epoch = self.get_last_logged_epoch(
+            str(os.path.join("logs/", f"train_{self.train_tag}")))
 
         train_summary_writer = tf.summary.create_file_writer(
-            os.path.join("logs/", f"train_{log_name}")
+            os.path.join("logs/", f"train_{self.train_tag}")
         )
-        val_summary_writer = tf.summary.create_file_writer(os.path.join("logs/", f"val_{log_name}"))
+        val_summary_writer = tf.summary.create_file_writer(
+            os.path.join("logs/", f"val_{self.train_tag}"))
 
         train_loss_metric = tf.keras.metrics.Mean(name="train_loss_metric")
         val_loss_metric = tf.keras.metrics.Mean(name="val_loss_metric")
@@ -218,12 +238,14 @@ class VocaModel:
 
             self.run_epoch(train_loss_metric, is_training=True)
             with train_summary_writer.as_default():
-                tf.summary.scalar("loss", train_loss_metric.result(), step=epoch + latest_epoch + 1)
-            
+                tf.summary.scalar(
+                    "loss", train_loss_metric.result(), step=epoch + latest_epoch + 1)
+
             if self.validation_freq != 0 and epoch % self.validation_freq == 0:
                 self.run_epoch(val_loss_metric, is_training=False)
                 with val_summary_writer.as_default():
-                    tf.summary.scalar("loss", val_loss_metric.result(), step=epoch + latest_epoch + 1)
+                    tf.summary.scalar(
+                        "loss", val_loss_metric.result(), step=epoch + latest_epoch + 1)
 
             train_loss_metric.reset_states()
             val_loss_metric.reset_states()
@@ -232,8 +254,19 @@ class VocaModel:
             logging.info("")
 
     def save(self, dir_path: str = "models/"):
-        self.model.save(dir_path, overwrite=False)
+        """
+        儲存模型
+        """
 
-    # TODO
+        self.model.save(
+            os.path.join(dir_path, self.train_tag),
+            overwrite=False
+        )
+        return self.train_tag
+
+    # TODO test model
     def eval(self):
+        """
+        測試模型
+        """
         pass

@@ -1,75 +1,87 @@
-model_dir: "models/"
-checkpoint_dir: "checkpoints/"
-output_dirs:
-  video: "outputs/"
-  mesh: "outputs/meshes/"
-
-data:
-  path:
-    audio:
-      raw: "data/audio/raw_audio_fixed.pkl"
-      processed: "data/audio/deepspeech.pkl"
-    mesh: "data/meshes"
-    
-  subjects:
-    train:
-      - FaceTalk_170811_03274_TA
-    val:
-      - FaceTalk_170811_03274_TA
-    test:
-      - FaceTalk_170811_03274_TA
-  sequences:
-    train:
-      - sentence01
-      - sentence02
-      - sentence03
-      - sentence04
-      - sentence05
-      - sentence06
-      - sentence07
-      - sentence08
-      - sentence09
-      - sentence10
-      - sentence11
-      - sentence12
-      - sentence13
-      - sentence14
-      - sentence15
-      - sentence16
-      - sentence17
-      - sentence18
-      - sentence19
-      - sentence20
-      - sentence21
-      - sentence22
-      - sentence23
-      - sentence24
-      - sentence25
-      - sentence26
-      - sentence27
-      - sentence28
-      - sentence29
-      - sentence30
-      - sentence31
-      - sentence32
-      - sentence33
-      - sentence34
-      - sentence35
-      - sentence36
-      - sentence37
-      - sentence38
-    val:
-      - sentence39
-      - sentence40
-    test:
-
 training:
   loss_weights:
     pos: 1
     vel: 0
-    acc: 50
+    acc: 20
   optimizer: "Adam"
   learning_rate: 0.0001
-  epochs: 150
+  epochs: 100
   validation_freq: 5
   batch_size: 64 # TODO
+  shuffle: true
+  reset: true # 是否從頭開始訓練
+
+model_dir: "models/"
+checkpoint_dir: "checkpoints/"
+
+output:
+  video_only: "outputs/video_only.mp4"
+  video: "outputs/video.mp4"
+  flame_param: "outputs/flame.npy"
+  mesh_dir: "outputs/meshes/"
+  gt_dir: "outputs/gt/"
+
+data:
+  audio:
+    train:
+      raw: "data/audio/raw_audio_fixed.pkl"
+      processed: "data/audio/deepspeech.pkl"
+    run:
+      raw: "data/audio/rickroll.mp3"
+      # processed: "data/audio/rickroll_single_processed.pkl"
+
+  mesh: "data/meshes"
+
+k_fold: false # 如果 true, 後面 subject/sequence 只需要給 train (不用 val)
+
+subjects:
+  train:
+    - FaceTalk_170809_00138_TA
+  val:
+    - FaceTalk_170809_00138_TA
+  test:
+    - FaceTalk_170809_00138_TA
+sequences:
+  train:
+    - sentence01
+    - sentence02
+    - sentence03
+    - sentence04
+    - sentence05
+    - sentence06
+    - sentence07
+    - sentence08
+    - sentence09
+    - sentence10
+    - sentence11
+    - sentence12
+    - sentence13
+    - sentence14
+    - sentence15
+    - sentence16
+    - sentence17
+    - sentence18
+    - sentence19
+    - sentence20
+    - sentence21
+    - sentence22
+    - sentence23
+    - sentence24
+    - sentence25
+    - sentence26
+    - sentence27
+    - sentence28
+    - sentence29
+    - sentence30
+    - sentence31
+    - sentence32
+    - sentence33
+    - sentence34
+    - sentence35
+    - sentence36
+    - sentence37
+    - sentence38
+    - sentence39
+  val:
+    - sentence40
+  test:
