@@ -31,8 +31,12 @@ def main():
     model = tf.keras.models.load_model(
         os.path.join(config["model_dir"], train_tag))
 
+    # Subject ID
+    subject_id = int(input("Enter subject id: "))
+
     # 根據音訊預測臉部 FLAME 參數 (415)
-    flame_params = model.predict([processed_audio])
+    flame_params = model.predict(
+        [processed_audio, np.full(len(processed_audio), subject_id)])
 
     # 儲存 FLAME 參數
     check_and_create_directory("outputs")  # TODO

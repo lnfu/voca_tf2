@@ -75,7 +75,8 @@ def main():
         logging.warning("強制結束")
     finally:
         model.eval()
-        print(f"Training tag: {model.save(dir_path=config["model_dir"])}")
+        train_tag = model.save(dir_path=config["model_dir"])
+        print(f"Training tag: {train_tag}")
 
 
 if __name__ == "__main__":

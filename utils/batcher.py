@@ -9,19 +9,19 @@ class Batcher:
     def __init__(
         self,
         data_handler: DataHandler,
-        subject_names: set[str],  # 目前只會挑一個 subject
-        sequence_names: set[str],
-        shuffle: bool = False,  # 只會打亂句子
+        subject_names: list[str],
+        sequence_names: list[str],
+        shuffle: bool = False,
         batch_size: int = 64,
     ):
 
         self.shuffle = shuffle
 
         self.data = []
-        
+
         if subject_names == None:
             return
-        
+
         if sequence_names == None:
             return
 
@@ -30,13 +30,15 @@ class Batcher:
                 if data_handler.is_subject_sequence_pair_valid(
                     subject_name, sequence_name
                 ):
-                    num_frame = data_handler.get_num_frame(subject_name, sequence_name)
+                    num_frame = data_handler.get_num_frame(
+                        subject_name, sequence_name)
 
                     data_audio = data_handler.audio_processed_data[subject_name][sequence_name]
                     data_pcd = data_handler.pcd_data[subject_name][sequence_name]
 
                     data_ = [
                         {
+                            "subject_id": subject_names.index(subject_name),
                             "audio": data_audio[i: i + batch_size],
                             "pcd": data_pcd[i: i + batch_size]
                         }
@@ -63,7 +65,12 @@ class Batcher:
         data_ = self.data[self.current_batch_index]
         self.current_batch_index += 1
 
-        return data_["audio"], data_["pcd"]
+        assert len(data_["audio"]) == len(data_["pcd"])
+        return (
+            np.full(len(data_["audio"]), data_["subject_id"]),
+            data_["audio"],
+            data_["pcd"]
+        )
 
     def shuffle_data(self):
         import random

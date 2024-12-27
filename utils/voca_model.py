@@ -34,7 +34,7 @@ def build_conv_layer(
     kernel_size=(3, 1),
     strides=(2, 1),
     padding: str = "same",
-    activation: str = "silu",
+    activation=None,
 ):
     return tf.keras.layers.Conv2D(
         filters=filters,
